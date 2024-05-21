@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 
+import dev.langchain4j.service.UserMessage;
 import io.quarkiverse.langchain4j.RegisterAiService;
 import io.quarkiverse.langchain4j.watsonx.annotation.Deployment;
 import io.quarkiverse.langchain4j.watsonx.client.WatsonxRestApi;
@@ -73,7 +74,7 @@ public class DeploymentPromptTest {
     @RegisterAiService(modelName = "1")
     @Singleton
     interface AIService1 {
-        String chat(String text);
+        String chat(@UserMessage String text);
     }
 
     @Inject
@@ -110,5 +111,32 @@ public class DeploymentPromptTest {
                 .build();
 
         assertEquals("AI Response", aiService.chat("Hello"));
+    }
+
+    @Test
+    void test_no_deployment() {
+
+        mockServers.mockIAMBuilder(200)
+                .response(WireMockUtil.BEARER_TOKEN, new Date())
+                .build();
+
+        mockServers.mockWatsonxBuilder(WireMockUtil.URL_WATSONX_CHAT_API, 200)
+                .response("""
+                        {
+                            "model_id": "google/flan-ul2",
+                            "created_at": "2023-07-21T16:52:32.190Z",
+                            "results": [
+                            {
+                                "generated_text": "AI Response",
+                                "generated_token_count": 4,
+                                "input_token_count": 12,
+                                "stop_reason": "eos_token"
+                            }
+                            ]
+                        }
+                        """)
+                .build();
+
+        assertEquals("AI Response", aiService1.chat("Hello"));
     }
 }

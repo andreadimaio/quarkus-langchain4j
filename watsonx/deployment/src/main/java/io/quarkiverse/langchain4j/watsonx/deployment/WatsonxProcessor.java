@@ -4,8 +4,10 @@ import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.CHAT_MOD
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.EMBEDDING_MODEL;
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.STREAMING_CHAT_MODEL;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -58,7 +60,7 @@ public class WatsonxProcessor {
     }
 
     @BuildStep
-    void selectDeploymentBeansCandidates(CombinedIndexBuildItem indexBuildItem,
+    void selectBeansCandidates(CombinedIndexBuildItem indexBuildItem,
             List<SelectedChatModelProviderBuildItem> selectedChatItem,
             BuildProducer<SelectedWatsonxChatModelProviderBuildItem> builderBeans) {
 
@@ -67,12 +69,14 @@ public class WatsonxProcessor {
 
         IndexView index = indexBuildItem.getIndex();
         var instances = index.getAnnotations(Deployment.class);
+        Set<SelectedWatsonxChatModelProviderBuildItem> beansToBuild = new HashSet<>();
 
         for (var selected : selectedChatItem) {
             if (!PROVIDER.equals(selected.getProvider()))
                 continue;
 
             boolean created = false;
+
             for (AnnotationInstance instance : instances) {
                 ClassInfo declarativeAiServiceClassInfo = instance.target().asClass();
                 var registerAiService = declarativeAiServiceClassInfo.annotation(LangChain4jDotNames.REGISTER_AI_SERVICES);
@@ -82,17 +86,20 @@ public class WatsonxProcessor {
                 var modelName = registerAiService.value("modelName");
 
                 if (NamedModelUtil.isDefault(selected.getModelName()) && Objects.nonNull(modelName)
-                        && !modelName.asString().equals(NamedModelUtil.DEFAULT_NAME))
+                        && !modelName.asString().equals(NamedModelUtil.DEFAULT_NAME)) {
                     continue;
+                }
 
                 if (!NamedModelUtil.isDefault(selected.getModelName())
-                        && (Objects.isNull(modelName) || !modelName.asString().equals(selected.getModelName())))
+                        && (Objects.isNull(modelName) || !modelName.asString().equals(selected.getModelName()))) {
                     continue;
+                }
 
-                if (checkIfLangchain4jAnnotationsExist(declarativeAiServiceClassInfo))
+                if (checkIfLangchain4jAnnotationsExist(declarativeAiServiceClassInfo)) {
                     throw new RuntimeException(
                             "The class %s cannot be annotated with @SystemMessage/@UserMessage if the annotation @Deployment is present"
                                     .formatted(declarativeAiServiceClassInfo.name()));
+                }
 
                 for (MethodInfo method : declarativeAiServiceClassInfo.methods()) {
                     if (checkIfLangchain4jAnnotationsExist(method))
@@ -101,15 +108,35 @@ public class WatsonxProcessor {
                                         .formatted(method.name()));
                 }
 
-                builderBeans.produce(new SelectedWatsonxChatModelProviderBuildItem(
-                        selected.getProvider(), selected.getModelName(), instance.value().asString()));
+                var bean = new SelectedWatsonxChatModelProviderBuildItem(
+                        selected.getProvider(), selected.getModelName(), instance.value().asString());
 
+                if (beansToBuild.contains(bean)) {
+                    throw new RuntimeException(
+                            "A @RegisterAiService for the model \"%s\" with the provider \"%s\" already exist"
+                                    .formatted(selected.getModelName(), selected.getProvider()));
+                }
+
+                beansToBuild.add(bean);
                 created = true;
             }
 
-            if (!created)
-                builderBeans.produce(new SelectedWatsonxChatModelProviderBuildItem(
-                        selected.getProvider(), selected.getModelName(), null));
+            if (!created) {
+
+                var bean = new SelectedWatsonxChatModelProviderBuildItem(
+                        selected.getProvider(), selected.getModelName(), null);
+
+                if (beansToBuild.contains(bean)) {
+                    throw new RuntimeException("A @RegisterAiService for the model \"%s\" with provider \"%s\" already exist"
+                            .formatted(selected.getModelName(), selected.getProvider()));
+                }
+
+                beansToBuild.add(bean);
+            }
+        }
+
+        for (var bean : beansToBuild) {
+            builderBeans.produce(bean);
         }
     }
 
