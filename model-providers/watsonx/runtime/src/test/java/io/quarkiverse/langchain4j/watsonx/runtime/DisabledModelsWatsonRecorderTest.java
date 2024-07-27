@@ -11,11 +11,15 @@ import dev.langchain4j.model.chat.DisabledChatLanguageModel;
 import dev.langchain4j.model.chat.DisabledStreamingChatLanguageModel;
 import dev.langchain4j.model.embedding.DisabledEmbeddingModel;
 import io.quarkiverse.langchain4j.runtime.NamedConfigUtil;
+import io.quarkiverse.langchain4j.watsonx.prompt.PromptFormatterMapper;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig.WatsonConfig;
+import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxFixedRuntimeConfig;
 
 class DisabledModelsWatsonRecorderTest {
-    LangChain4jWatsonxConfig config = mock(LangChain4jWatsonxConfig.class);
+    LangChain4jWatsonxConfig runtimeConfig = mock(LangChain4jWatsonxConfig.class);
+    LangChain4jWatsonxFixedRuntimeConfig fixedRuntimeConfig = mock(LangChain4jWatsonxFixedRuntimeConfig.class);
+
     WatsonConfig defaultConfig = mock(WatsonConfig.class);
     WatsonxRecorder recorder = new WatsonxRecorder();
 
@@ -24,21 +28,24 @@ class DisabledModelsWatsonRecorderTest {
         when(defaultConfig.enableIntegration())
             .thenReturn(false);
 
-        when(config.defaultConfig())
+        when(runtimeConfig.defaultConfig())
             .thenReturn(defaultConfig);
     }
 
     @Test
     void disabledChatModel() {
-        assertThat(recorder.chatModel(config, NamedConfigUtil.DEFAULT_NAME).get())
+        assertThat(recorder
+                .chatModel(runtimeConfig, fixedRuntimeConfig, NamedConfigUtil.DEFAULT_NAME, PromptFormatterMapper.getDefault())
+                .get())
                 .isNotNull()
                 .isExactlyInstanceOf(DisabledChatLanguageModel.class);
 
-        assertThat(recorder.streamingChatModel(config, NamedConfigUtil.DEFAULT_NAME).get())
+        assertThat(recorder.streamingChatModel(runtimeConfig, fixedRuntimeConfig, NamedConfigUtil.DEFAULT_NAME,
+                PromptFormatterMapper.getDefault()).get())
                 .isNotNull()
                 .isExactlyInstanceOf(DisabledStreamingChatLanguageModel.class);
 
-        assertThat(recorder.embeddingModel(config, NamedConfigUtil.DEFAULT_NAME).get())
+        assertThat(recorder.embeddingModel(runtimeConfig, NamedConfigUtil.DEFAULT_NAME).get())
                 .isNotNull()
                 .isExactlyInstanceOf(DisabledEmbeddingModel.class);
     }

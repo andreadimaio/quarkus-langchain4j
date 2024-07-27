@@ -116,8 +116,8 @@ public class AiServicesProcessor {
 
     public static final DotName MICROMETER_TIMED = DotName.createSimple("io.micrometer.core.annotation.Timed");
     public static final DotName MICROMETER_COUNTED = DotName.createSimple("io.micrometer.core.annotation.Counted");
-    private static final String DEFAULT_DELIMITER = "\n";
-    private static final Predicate<AnnotationInstance> IS_METHOD_PARAMETER_ANNOTATION = ai -> ai.target()
+    public static final String DEFAULT_DELIMITER = "\n";
+    public static final Predicate<AnnotationInstance> IS_METHOD_PARAMETER_ANNOTATION = ai -> ai.target()
             .kind() == AnnotationTarget.Kind.METHOD_PARAMETER;
     private static final Function<AnnotationInstance, Integer> METHOD_PARAMETER_POSITION_FUNCTION = ai -> Integer
             .valueOf(ai.target()
@@ -1032,7 +1032,7 @@ public class AiServicesProcessor {
             instance = method.declaringClass().declaredAnnotation(LangChain4jDotNames.SYSTEM_MESSAGE);
         }
         if (instance != null) {
-            String systemMessageTemplate = getTemplateFromAnnotationInstance(instance);
+            String systemMessageTemplate = TemplateUtil.getTemplateFromAnnotationInstance(instance);
             if (systemMessageTemplate.isEmpty()) {
                 throw illegalConfigurationForMethod("@SystemMessage's template parameter cannot be empty", method);
             }
@@ -1060,7 +1060,7 @@ public class AiServicesProcessor {
 
         AnnotationInstance userMessageInstance = method.declaredAnnotation(LangChain4jDotNames.USER_MESSAGE);
         if (userMessageInstance != null) {
-            String userMessageTemplate = getTemplateFromAnnotationInstance(userMessageInstance);
+            String userMessageTemplate = TemplateUtil.getTemplateFromAnnotationInstance(userMessageInstance);
 
             if (userMessageTemplate.contains("{{it}}")) {
                 if (method.parametersCount() != 1) {
@@ -1107,39 +1107,6 @@ public class AiServicesProcessor {
                         method);
             }
         }
-    }
-
-    /**
-     * Meant to be called with instances of {@link dev.langchain4j.service.SystemMessage} or
-     * {@link dev.langchain4j.service.UserMessage}
-     *
-     * @return the String value of the template or an empty string if not specified
-     */
-    private String getTemplateFromAnnotationInstance(AnnotationInstance instance) {
-        AnnotationValue fromResourceValue = instance.value("fromResource");
-        if (fromResourceValue != null) {
-            String fromResource = fromResourceValue.asString();
-            if (!fromResource.startsWith("/")) {
-                fromResource = "/" + fromResource;
-
-            }
-            try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(fromResource)) {
-                if (is != null) {
-                    return new String(is.readAllBytes());
-                }
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        } else {
-            AnnotationValue valueValue = instance.value();
-            if (valueValue != null) {
-                AnnotationValue delimiterValue = instance.value("delimiter");
-                String delimiter = delimiterValue != null ? delimiterValue.asString() : DEFAULT_DELIMITER;
-                return String.join(delimiter, valueValue.asStringArray());
-            }
-
-        }
-        return "";
     }
 
     private Optional<AiServiceMethodCreateInfo.MetricsTimedInfo> gatherMetricsTimedInfo(MethodInfo method,

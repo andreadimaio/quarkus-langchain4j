@@ -19,8 +19,8 @@ import io.quarkiverse.langchain4j.watsonx.bean.TokenizationRequest;
 
 public class WatsonxChatModel extends WatsonxModel implements ChatLanguageModel, TokenCountEstimator {
 
-    public WatsonxChatModel(WatsonxModel.Builder config) {
-        super(config);
+    public WatsonxChatModel(WatsonxModel.Builder builder) {
+        super(builder);
     }
 
     @Override
