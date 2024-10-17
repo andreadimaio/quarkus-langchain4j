@@ -1,18 +1,17 @@
 package io.quarkiverse.langchain4j.runtime.aiservice;
 
 import static dev.langchain4j.data.message.UserMessage.userMessage;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
-
-import jakarta.enterprise.inject.spi.CDI;
-
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.request.ResponseFormat;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.Response;
 import dev.langchain4j.rag.AugmentationResult;
 import io.quarkiverse.langchain4j.guardrails.Guardrail;
@@ -22,6 +21,7 @@ import io.quarkiverse.langchain4j.guardrails.InputGuardrail;
 import io.quarkiverse.langchain4j.guardrails.InputGuardrailResult;
 import io.quarkiverse.langchain4j.guardrails.OutputGuardrail;
 import io.quarkiverse.langchain4j.guardrails.OutputGuardrailResult;
+import jakarta.enterprise.inject.spi.CDI;
 
 public class GuardrailsSupport {
 
@@ -42,6 +42,7 @@ public class GuardrailsSupport {
     public static Response<AiMessage> invokeOutputGuardrails(AiServiceMethodCreateInfo methodCreateInfo,
             ChatMemory chatMemory,
             ChatLanguageModel chatModel,
+            ResponseFormat responseFormat,
             Response<AiMessage> response,
             List<ToolSpecification> toolSpecifications,
             OutputGuardrail.OutputGuardrailParams output) {
@@ -50,6 +51,13 @@ public class GuardrailsSupport {
         if (max <= 0) {
             max = 1;
         }
+
+        ChatRequest chatRequest = ChatRequest.builder()
+            .messages(chatMemory.messages())
+            .responseFormat(responseFormat)
+            .toolSpecifications(toolSpecifications)
+            .build();
+
         while (attempt < max) {
             OutputGuardrailResult result;
             try {
@@ -64,19 +72,13 @@ public class GuardrailsSupport {
                 } else if (result.getReprompt() != null) {
                     // Retry with re-prompting
                     chatMemory.add(userMessage(result.getReprompt()));
-                    if (toolSpecifications == null) {
-                        response = chatModel.generate(chatMemory.messages());
-                    } else {
-                        response = chatModel.generate(chatMemory.messages(), toolSpecifications);
-                    }
+                    ChatResponse chatResponse = chatModel.chat(chatRequest);
+                    response = Response.from(chatResponse.aiMessage(), chatResponse.tokenUsage(), chatResponse.finishReason());
                     chatMemory.add(response.content());
                 } else {
                     // Retry without re-prompting
-                    if (toolSpecifications == null) {
-                        response = chatModel.generate(chatMemory.messages());
-                    } else {
-                        response = chatModel.generate(chatMemory.messages(), toolSpecifications);
-                    }
+                    ChatResponse chatResponse = chatModel.chat(chatRequest);
+                    response = Response.from(chatResponse.aiMessage(), chatResponse.tokenUsage(), chatResponse.finishReason());
                     chatMemory.add(response.content());
                 }
                 attempt++;

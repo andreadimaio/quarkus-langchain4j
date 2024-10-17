@@ -7,9 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
-
 import org.eclipse.microprofile.config.ConfigProvider;
-
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.service.tool.ToolExecutor;
 import io.quarkiverse.langchain4j.guardrails.InputGuardrail;
@@ -33,9 +31,11 @@ public final class AiServiceMethodCreateInfo {
     private final Optional<MetricsTimedInfo> metricsTimedInfo;
     private final Optional<MetricsCountedInfo> metricsCountedInfo;
     private final Optional<SpanInfo> spanInfo;
+    
     // support @Toolbox
     private final List<String> toolClassNames;
     private final ResponseSchemaInfo responseSchemaInfo;
+    private final ResponseFormatBuilder responseFormat;
 
     // support for guardrails
     private final List<String> outputGuardrailsClassNames;
@@ -62,6 +62,7 @@ public final class AiServiceMethodCreateInfo {
             Optional<MetricsCountedInfo> metricsCountedInfo,
             Optional<SpanInfo> spanInfo,
             ResponseSchemaInfo responseSchemaInfo,
+            ResponseFormatBuilder responseFormat,
             List<String> toolClassNames,
             List<String> inputGuardrailsClassNames,
             List<String> outputGuardrailsClassNames) {
@@ -82,6 +83,7 @@ public final class AiServiceMethodCreateInfo {
         this.metricsCountedInfo = metricsCountedInfo;
         this.spanInfo = spanInfo;
         this.responseSchemaInfo = responseSchemaInfo;
+        this.responseFormat = responseFormat;
         this.toolClassNames = toolClassNames;
         this.inputGuardrailsClassNames = inputGuardrailsClassNames;
         this.outputGuardrailsClassNames = outputGuardrailsClassNames;
@@ -141,6 +143,10 @@ public final class AiServiceMethodCreateInfo {
 
     public ResponseSchemaInfo getResponseSchemaInfo() {
         return responseSchemaInfo;
+    }
+
+    public ResponseFormatBuilder getResponseFormat() {
+        return responseFormat;
     }
 
     public List<String> getToolClassNames() {

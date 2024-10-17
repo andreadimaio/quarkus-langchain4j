@@ -13,7 +13,6 @@ import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.V;
 import static io.quarkiverse.langchain4j.deployment.MethodParameterAsTemplateVariableAllowance.FORCE_ALLOW;
 import static io.quarkiverse.langchain4j.deployment.MethodParameterAsTemplateVariableAllowance.IGNORE;
 import static io.quarkiverse.langchain4j.deployment.MethodParameterAsTemplateVariableAllowance.OPTIONAL_DENY;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -35,12 +34,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import jakarta.annotation.PreDestroy;
-import jakarta.enterprise.context.Dependent;
-import jakarta.enterprise.inject.spi.DeploymentException;
-import jakarta.inject.Inject;
-
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.AnnotationValue;
@@ -57,7 +50,6 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
-
 import dev.langchain4j.exception.IllegalConfigurationException;
 import dev.langchain4j.service.Moderate;
 import dev.langchain4j.service.output.ServiceOutputParser;
@@ -83,6 +75,7 @@ import io.quarkiverse.langchain4j.runtime.aiservice.DeclarativeAiServiceCreateIn
 import io.quarkiverse.langchain4j.runtime.aiservice.MetricsCountedWrapper;
 import io.quarkiverse.langchain4j.runtime.aiservice.MetricsTimedWrapper;
 import io.quarkiverse.langchain4j.runtime.aiservice.QuarkusAiServiceContext;
+import io.quarkiverse.langchain4j.runtime.aiservice.ResponseFormatBuilder;
 import io.quarkiverse.langchain4j.runtime.aiservice.SpanWrapper;
 import io.quarkiverse.langchain4j.spi.DefaultMemoryIdProvider;
 import io.quarkus.arc.Arc;
@@ -120,6 +113,10 @@ import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
 import io.quarkus.runtime.metrics.MetricsFactory;
 import io.smallrye.mutiny.Multi;
+import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.Dependent;
+import jakarta.enterprise.inject.spi.DeploymentException;
+import jakarta.inject.Inject;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class AiServicesProcessor {
@@ -1093,10 +1090,21 @@ public class AiServicesProcessor {
 
         List<MethodParameterInfo> params = method.parameters();
 
-        // TODO give user ability to provide custom OutputParser
+        ResponseFormatBuilder responseFormat;
         String outputFormatInstructions = "";
-        if (generateResponseSchema && !returnType.equals(Multi.class))
-            outputFormatInstructions = SERVICE_OUTPUT_PARSER.outputFormatInstructions(returnType);
+        if (!returnType.equals(Multi.class)) {
+        
+            // TODO give user ability to provide custom OutputParser
+            if(generateResponseSchema)
+                outputFormatInstructions = SERVICE_OUTPUT_PARSER.outputFormatInstructions(returnType);
+
+            responseFormat = new ResponseFormatBuilder(returnType);
+
+        } else {
+
+            // ResponseFormat of type TEXT.
+            responseFormat = new ResponseFormatBuilder();
+        }
 
         List<TemplateParameterInfo> templateParams = gatherTemplateParamInfo(params, allowedPredicates, ignoredPredicates);
         Optional<AiServiceMethodCreateInfo.TemplateInfo> systemMessageInfo = gatherSystemMessageInfo(method, templateParams);
@@ -1131,7 +1139,7 @@ public class AiServicesProcessor {
         return new AiServiceMethodCreateInfo(method.declaringClass().name().toString(), method.name(), systemMessageInfo,
                 userMessageInfo, memoryIdParamPosition, requiresModeration,
                 returnTypeSignature(method.returnType(), new TypeArgMapper(method.declaringClass(), index)),
-                metricsTimedInfo, metricsCountedInfo, spanInfo, responseSchemaInfo, methodToolClassNames, inputGuardrails,
+                metricsTimedInfo, metricsCountedInfo, spanInfo, responseSchemaInfo, responseFormat, methodToolClassNames, inputGuardrails,
                 outputGuardrails);
     }
 

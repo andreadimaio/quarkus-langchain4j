@@ -5,7 +5,6 @@ import static dev.langchain4j.internal.Exceptions.runtime;
 import static dev.langchain4j.service.AiServices.removeToolMessages;
 import static dev.langchain4j.service.AiServices.verifyModerationIfNeeded;
 import static io.quarkiverse.langchain4j.runtime.ResponseSchemaUtil.hasResponseSchema;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -28,9 +27,7 @@ import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
 import org.jboss.logging.Logger;
-
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.image.Image;
@@ -42,6 +39,9 @@ import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.request.ResponseFormat;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.input.Prompt;
 import dev.langchain4j.model.input.PromptTemplate;
 import dev.langchain4j.model.input.structured.StructuredPrompt;
@@ -78,12 +78,11 @@ public class AiServiceMethodImplementationSupport {
     private static final Logger log = Logger.getLogger(AiServiceMethodImplementationSupport.class);
     private static final int MAX_SEQUENTIAL_TOOL_EXECUTIONS = 10;
     private static final List<DefaultMemoryIdProvider> DEFAULT_MEMORY_ID_PROVIDERS;
-
     private static final ServiceOutputParser SERVICE_OUTPUT_PARSER = new QuarkusServiceOutputParser(); // TODO: this might need to be improved
 
     static {
         var defaultMemoryIdProviders = ServiceHelper.loadFactories(
-                DefaultMemoryIdProvider.class);
+            DefaultMemoryIdProvider.class);
         if (defaultMemoryIdProviders.isEmpty()) {
             DEFAULT_MEMORY_ID_PROVIDERS = Collections.emptyList();
         } else {
@@ -114,7 +113,7 @@ public class AiServiceMethodImplementationSupport {
         Audit audit = null;
         if (auditService != null) {
             audit = auditService.create(new Audit.CreateInfo(createInfo.getInterfaceName(), createInfo.getMethodName(),
-                    methodArgs, createInfo.getMemoryIdParamPosition()));
+                methodArgs, createInfo.getMemoryIdParamPosition()));
         }
 
         // TODO: add validation
@@ -135,10 +134,10 @@ public class AiServiceMethodImplementationSupport {
     }
 
     private static Object doImplement(AiServiceMethodCreateInfo methodCreateInfo, Object[] methodArgs,
-            QuarkusAiServiceContext context, Audit audit) {
+        QuarkusAiServiceContext context, Audit audit) {
         Object memoryId = memoryId(methodCreateInfo, methodArgs, context.chatMemoryProvider != null);
         Optional<SystemMessage> systemMessage = prepareSystemMessage(methodCreateInfo, methodArgs,
-                context.hasChatMemory() ? context.chatMemory(memoryId).messages() : Collections.emptyList());
+            context.hasChatMemory() ? context.chatMemory(memoryId).messages() : Collections.emptyList());
         UserMessage userMessage = prepareUserMessage(context, methodCreateInfo, methodArgs);
 
         Type returnType = methodCreateInfo.getReturnType();
@@ -153,17 +152,17 @@ public class AiServiceMethodImplementationSupport {
         boolean needsMemorySeed = needsMemorySeed(context, memoryId); // we need to know figure this out before we add the system and user message
 
         boolean hasMethodSpecificTools = methodCreateInfo.getToolClassNames() != null
-                && !methodCreateInfo.getToolClassNames().isEmpty();
+            && !methodCreateInfo.getToolClassNames().isEmpty();
         List<ToolSpecification> toolSpecifications = hasMethodSpecificTools ? methodCreateInfo.getToolSpecifications()
-                : context.toolSpecifications;
+            : context.toolSpecifications;
         Map<String, ToolExecutor> toolExecutors = hasMethodSpecificTools ? methodCreateInfo.getToolExecutors()
-                : context.toolExecutors;
+            : context.toolExecutors;
 
         AugmentationResult augmentationResult = null;
         if (context.retrievalAugmentor != null) {
             List<ChatMessage> chatMemory = context.hasChatMemory()
-                    ? context.chatMemory(memoryId).messages()
-                    : null;
+                ? context.chatMemory(memoryId).messages()
+                : null;
             Metadata metadata = Metadata.from(userMessage, memoryId, chatMemory);
             AugmentationRequest augmentationRequest = new AugmentationRequest(userMessage, metadata);
 
@@ -180,42 +179,42 @@ public class AiServiceMethodImplementationSupport {
                 }, Infrastructure.getDefaultWorkerPool());
 
                 return Multi.createFrom().completionStage(augmentationResultCF).flatMap(
-                        new Function<>() {
-                            @Override
-                            public Flow.Publisher<?> apply(AugmentationResult ar) {
-                                ChatMessage augmentedUserMessage = ar.chatMessage();
-                                GuardrailsSupport.invokeInputGuardrails(methodCreateInfo, (UserMessage) augmentedUserMessage,
-                                        context.chatMemory(memoryId), ar);
-                                List<ChatMessage> messagesToSend = messagesToSend(augmentedUserMessage, needsMemorySeed);
-                                return Multi.createFrom()
-                                        .emitter(new MultiEmitterConsumer(messagesToSend, toolSpecifications,
-                                                toolExecutors,
-                                                ar.contents(),
-                                                context,
-                                                memoryId));
-                            }
+                    new Function<>() {
+                        @Override
+                        public Flow.Publisher<?> apply(AugmentationResult ar) {
+                            ChatMessage augmentedUserMessage = ar.chatMessage();
+                            GuardrailsSupport.invokeInputGuardrails(methodCreateInfo, (UserMessage) augmentedUserMessage,
+                                context.chatMemory(memoryId), ar);
+                            List<ChatMessage> messagesToSend = messagesToSend(augmentedUserMessage, needsMemorySeed);
+                            return Multi.createFrom()
+                                .emitter(new MultiEmitterConsumer(messagesToSend, toolSpecifications,
+                                    toolExecutors,
+                                    ar.contents(),
+                                    context,
+                                    memoryId));
+                        }
 
-                            private List<ChatMessage> messagesToSend(ChatMessage augmentedUserMessage,
-                                    boolean needsMemorySeed) {
-                                List<ChatMessage> messagesToSend;
-                                ChatMemory chatMemory;
-                                if (context.hasChatMemory()) {
-                                    chatMemory = context.chatMemory(memoryId);
-                                    messagesToSend = createMessagesToSendForExistingMemory(systemMessage, augmentedUserMessage,
-                                            chatMemory, needsMemorySeed, context, methodCreateInfo);
-                                } else {
-                                    messagesToSend = createMessagesToSendForNoMemory(systemMessage, augmentedUserMessage,
-                                            needsMemorySeed, context, methodCreateInfo);
-                                }
-                                return messagesToSend;
+                        private List<ChatMessage> messagesToSend(ChatMessage augmentedUserMessage,
+                            boolean needsMemorySeed) {
+                            List<ChatMessage> messagesToSend;
+                            ChatMemory chatMemory;
+                            if (context.hasChatMemory()) {
+                                chatMemory = context.chatMemory(memoryId);
+                                messagesToSend = createMessagesToSendForExistingMemory(systemMessage, augmentedUserMessage,
+                                    chatMemory, needsMemorySeed, context, methodCreateInfo);
+                            } else {
+                                messagesToSend = createMessagesToSendForNoMemory(systemMessage, augmentedUserMessage,
+                                    needsMemorySeed, context, methodCreateInfo);
                             }
-                        });
+                            return messagesToSend;
+                        }
+                    });
             }
         }
 
         GuardrailsSupport.invokeInputGuardrails(methodCreateInfo, userMessage,
-                context.hasChatMemory() ? context.chatMemory(memoryId) : null,
-                augmentationResult);
+            context.hasChatMemory() ? context.chatMemory(memoryId) : null,
+            augmentationResult);
 
         CommittableChatMemory chatMemory;
         List<ChatMessage> messagesToSend;
@@ -224,34 +223,43 @@ public class AiServiceMethodImplementationSupport {
             // we want to defer saving the new messages because the service could fail and be retried
             chatMemory = new DefaultCommittableChatMemory(context.chatMemory(memoryId));
             messagesToSend = createMessagesToSendForExistingMemory(systemMessage, userMessage, chatMemory, needsMemorySeed,
-                    context, methodCreateInfo);
+                context, methodCreateInfo);
         } else {
             chatMemory = new NoopChatMemory();
             messagesToSend = createMessagesToSendForNoMemory(systemMessage, userMessage, needsMemorySeed, context,
-                    methodCreateInfo);
+                methodCreateInfo);
         }
 
         if (isTokenStream(returnType)) {
             // TODO Indicate the output guardrails cannot be used when streaming
             chatMemory.commit(); // for streaming cases, we really have to commit because all alternatives are worse
             return new AiServiceTokenStream(messagesToSend, toolSpecifications, toolExecutors,
-                    (augmentationResult != null ? augmentationResult.contents() : null), context, memoryId);
+                (augmentationResult != null ? augmentationResult.contents() : null), context, memoryId);
         }
 
         if (isMulti(returnType)) {
             // TODO Indicate the output guardrails cannot be used when streaming
             chatMemory.commit(); // for streaming cases, we really have to commit because all alternatives are worse
             return Multi.createFrom().emitter(new MultiEmitterConsumer(messagesToSend, toolSpecifications,
-                    toolExecutors, augmentationResult != null ? augmentationResult.contents() : null, context, memoryId));
+                toolExecutors, augmentationResult != null ? augmentationResult.contents() : null, context, memoryId));
         }
 
         Future<Moderation> moderationFuture = triggerModerationIfNeeded(context, methodCreateInfo, messagesToSend);
 
         log.debug("Attempting to obtain AI response");
 
-        Response<AiMessage> response = toolSpecifications == null
-                ? context.chatModel.generate(messagesToSend)
-                : context.chatModel.generate(messagesToSend, toolSpecifications);
+        ResponseFormat responseFormat =
+            methodCreateInfo.getResponseFormat().build(context.chatModel.supportedCapabilities());
+
+        ChatRequest chatRequest = ChatRequest.builder()
+            .messages(messagesToSend)
+            .toolSpecifications(toolSpecifications)
+            .responseFormat(responseFormat)
+            .build();
+
+        ChatResponse chatResponse = context.chatModel.chat(chatRequest);
+        Response<AiMessage> response = Response.from(chatResponse.aiMessage(), chatResponse.tokenUsage(), chatResponse.finishReason());
+
         log.debug("AI response obtained");
         if (audit != null) {
             audit.addLLMToApplicationMessage(response);
@@ -265,7 +273,7 @@ public class AiServiceMethodImplementationSupport {
 
             if (executionsLeft-- == 0) {
                 throw runtime("Something is wrong, exceeded %s sequential tool executions",
-                        MAX_SEQUENTIAL_TOOL_EXECUTIONS);
+                    MAX_SEQUENTIAL_TOOL_EXECUTIONS);
             }
 
             AiMessage aiMessage = response.content();
@@ -284,8 +292,8 @@ public class AiServiceMethodImplementationSupport {
                 String toolExecutionResult = toolExecutor.execute(toolExecutionRequest, memoryId);
                 log.debugv("Result of {0} is '{1}'", toolExecutionRequest, toolExecutionResult);
                 ToolExecutionResultMessage toolExecutionResultMessage = ToolExecutionResultMessage.from(
-                        toolExecutionRequest,
-                        toolExecutionResult);
+                    toolExecutionRequest,
+                    toolExecutionResult);
                 if (audit != null) {
                     audit.addApplicationToLLMMessage(toolExecutionResultMessage);
                 }
@@ -293,7 +301,14 @@ public class AiServiceMethodImplementationSupport {
             }
 
             log.debug("Attempting to obtain AI response");
-            response = context.chatModel.generate(chatMemory.messages(), toolSpecifications);
+            chatRequest = ChatRequest.builder()
+                .messages(chatMemory.messages())
+                .toolSpecifications(toolSpecifications)
+                .responseFormat(responseFormat)
+                .build();
+
+            chatResponse = context.chatModel.chat(chatRequest);
+            response = Response.from(chatResponse.aiMessage(), chatResponse.tokenUsage(), chatResponse.finishReason());
             log.debug("AI response obtained");
 
             if (audit != null) {
@@ -303,9 +318,9 @@ public class AiServiceMethodImplementationSupport {
             tokenUsageAccumulator = tokenUsageAccumulator.add(response.tokenUsage());
         }
 
-        response = GuardrailsSupport.invokeOutputGuardrails(methodCreateInfo, chatMemory, context.chatModel, response,
-                toolSpecifications,
-                new OutputGuardrail.OutputGuardrailParams(response.content(), chatMemory, augmentationResult));
+        response = GuardrailsSupport.invokeOutputGuardrails(methodCreateInfo, chatMemory, context.chatModel, responseFormat, response,
+            toolSpecifications,
+            new OutputGuardrail.OutputGuardrailParams(response.content(), chatMemory, augmentationResult));
 
         // everything worked as expected so let's commit the messages
         chatMemory.commit();
@@ -314,19 +329,19 @@ public class AiServiceMethodImplementationSupport {
         if (isResult(returnType)) {
             var parsedResponse = SERVICE_OUTPUT_PARSER.parse(response, resultTypeParam((ParameterizedType) returnType));
             return Result.builder()
-                    .content(parsedResponse)
-                    .tokenUsage(tokenUsageAccumulator)
-                    .sources(augmentationResult == null ? null : augmentationResult.contents())
-                    .finishReason(response.finishReason())
-                    .build();
+                .content(parsedResponse)
+                .tokenUsage(tokenUsageAccumulator)
+                .sources(augmentationResult == null ? null : augmentationResult.contents())
+                .finishReason(response.finishReason())
+                .build();
         } else {
             return SERVICE_OUTPUT_PARSER.parse(response, returnType);
         }
     }
 
     private static Object doImplementGenerateImage(AiServiceMethodCreateInfo methodCreateInfo, QuarkusAiServiceContext context,
-            Audit audit, Optional<SystemMessage> systemMessage, UserMessage userMessage,
-            Object memoryId, Type returnType) {
+        Audit audit, Optional<SystemMessage> systemMessage, UserMessage userMessage,
+        Object memoryId, Type returnType) {
         String imagePrompt;
         if (systemMessage.isPresent()) {
             imagePrompt = systemMessage.get().text() + "\n" + userMessage.singleText();
@@ -338,13 +353,14 @@ public class AiServiceMethodImplementationSupport {
             audit.initialMessages(systemMessage, userMessage);
         }
 
-        //TODO: does it make sense to use the retrievalAugmentor here? What good would be for us telling the LLM to use this or that information to create an image?
+        // TODO: does it make sense to use the retrievalAugmentor here? What good would be for us telling the LLM to use this or that
+        // information to create an image?
         AugmentationResult augmentationResult = null;
 
         // TODO: we can only support input guardrails for now as it is tied to AiMessage
         GuardrailsSupport.invokeInputGuardrails(methodCreateInfo, userMessage,
-                context.hasChatMemory() ? context.chatMemory(memoryId) : null,
-                augmentationResult);
+            context.hasChatMemory() ? context.chatMemory(memoryId) : null,
+            augmentationResult);
 
         Response<Image> imageResponse = context.imageModel.generate(imagePrompt);
         if (audit != null) {
@@ -355,11 +371,11 @@ public class AiServiceMethodImplementationSupport {
             return imageResponse.content();
         } else if (isResultImage(returnType)) {
             return Result.builder()
-                    .content(imageResponse)
-                    .tokenUsage(imageResponse.tokenUsage())
-                    .sources(augmentationResult == null ? null : augmentationResult.contents())
-                    .finishReason(imageResponse.finishReason())
-                    .build();
+                .content(imageResponse)
+                .tokenUsage(imageResponse.tokenUsage())
+                .sources(augmentationResult == null ? null : augmentationResult.contents())
+                .finishReason(imageResponse.finishReason())
+                .build();
         } else {
             throw new IllegalStateException("Unsupported return type: " + returnType);
         }
@@ -381,11 +397,11 @@ public class AiServiceMethodImplementationSupport {
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private static List<ChatMessage> createMessagesToSendForExistingMemory(Optional<SystemMessage> systemMessage,
-            ChatMessage userMessage,
-            ChatMemory chatMemory,
-            boolean needsMemorySeed,
-            QuarkusAiServiceContext context,
-            AiServiceMethodCreateInfo methodCreateInfo) {
+        ChatMessage userMessage,
+        ChatMemory chatMemory,
+        boolean needsMemorySeed,
+        QuarkusAiServiceContext context,
+        AiServiceMethodCreateInfo methodCreateInfo) {
         if (systemMessage.isPresent()) {
             chatMemory.add(systemMessage.get());
         }
@@ -393,7 +409,7 @@ public class AiServiceMethodImplementationSupport {
         if (needsMemorySeed) {
             // the seed messages always need to come after the system message and before the user message
             List<ChatMessage> seedChatMessages = context.chatMemorySeeder
-                    .seed(new ChatMemorySeeder.Context(methodCreateInfo.getMethodName()));
+                .seed(new ChatMemorySeeder.Context(methodCreateInfo.getMethodName()));
             for (ChatMessage seedChatMessage : seedChatMessages) {
                 chatMemory.add(seedChatMessage);
             }
@@ -405,17 +421,17 @@ public class AiServiceMethodImplementationSupport {
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private static List<ChatMessage> createMessagesToSendForNoMemory(Optional<SystemMessage> systemMessage,
-            ChatMessage userMessage,
-            boolean needsMemorySeed,
-            QuarkusAiServiceContext context,
-            AiServiceMethodCreateInfo methodCreateInfo) {
+        ChatMessage userMessage,
+        boolean needsMemorySeed,
+        QuarkusAiServiceContext context,
+        AiServiceMethodCreateInfo methodCreateInfo) {
         List<ChatMessage> result = new ArrayList<>();
         if (systemMessage.isPresent()) {
             result.add(systemMessage.get());
         }
         if (needsMemorySeed) {
             result.addAll(context.chatMemorySeeder
-                    .seed(new ChatMemorySeeder.Context(methodCreateInfo.getMethodName())));
+                .seed(new ChatMemorySeeder.Context(methodCreateInfo.getMethodName())));
         }
         result.add(userMessage);
         return result;
@@ -462,8 +478,8 @@ public class AiServiceMethodImplementationSupport {
     }
 
     private static Future<Moderation> triggerModerationIfNeeded(AiServiceContext context,
-            AiServiceMethodCreateInfo createInfo,
-            List<ChatMessage> messages) {
+        AiServiceMethodCreateInfo createInfo,
+        List<ChatMessage> messages) {
         Future<Moderation> moderationFuture = null;
         if (createInfo.isRequiresModeration()) {
             log.debug("Moderation is required and it will be executed in the background");
@@ -486,7 +502,7 @@ public class AiServiceMethodImplementationSupport {
     }
 
     private static Optional<SystemMessage> prepareSystemMessage(AiServiceMethodCreateInfo createInfo, Object[] methodArgs,
-            List<ChatMessage> previousChatMessages) {
+        List<ChatMessage> previousChatMessages) {
         if (createInfo.getSystemMessageInfo().isEmpty()) {
             return Optional.empty();
         }
@@ -504,14 +520,14 @@ public class AiServiceMethodImplementationSupport {
     }
 
     private static UserMessage prepareUserMessage(AiServiceContext context, AiServiceMethodCreateInfo createInfo,
-            Object[] methodArgs) {
+        Object[] methodArgs) {
         AiServiceMethodCreateInfo.UserMessageInfo userMessageInfo = createInfo.getUserMessageInfo();
 
         String userName = null;
         ImageContent imageContent = null;
         if (userMessageInfo.userNameParamPosition().isPresent()) {
             userName = methodArgs[userMessageInfo.userNameParamPosition().get()]
-                    .toString(); // LangChain4j does this, but might want to make anything other than a String a build time error
+                .toString(); // LangChain4j does this, but might want to make anything other than a String a build time error
         }
         if (userMessageInfo.imageParamPosition().isPresent()) {
             Object imageParamValue = methodArgs[userMessageInfo.imageParamPosition().get()];
@@ -529,8 +545,8 @@ public class AiServiceMethodImplementationSupport {
                 imageContent = ImageContent.from(i);
             } else {
                 throw new IllegalStateException("Unsupported parameter type '" + imageParamValue.getClass()
-                        + "' annotated with @ImageUrl. Offending AiService is '" + createInfo.getInterfaceName() + "#"
-                        + createInfo.getMethodName());
+                    + "' annotated with @ImageUrl. Offending AiService is '" + createInfo.getInterfaceName() + "#"
+                    + createInfo.getMethodName());
             }
         }
 
@@ -550,12 +566,12 @@ public class AiServiceMethodImplementationSupport {
             }
 
             boolean hasResponseSchema = createInfo.getResponseSchemaInfo().isInUserMessage().orElse(false)
-                    || hasResponseSchema(templateText);
+                || hasResponseSchema(templateText);
 
             if (hasResponseSchema && !createInfo.getResponseSchemaInfo().enabled()) {
                 throw new RuntimeException(
-                        "The %s placeholder cannot be used if the property quarkus.langchain4j.response-schema is set to false. Found in: %s"
-                                .formatted(ResponseSchemaUtil.placeholder(), createInfo.getInterfaceName()));
+                    "The %s placeholder cannot be used if the property quarkus.langchain4j.response-schema is set to false. Found in: %s"
+                        .formatted(ResponseSchemaUtil.placeholder(), createInfo.getInterfaceName()));
             }
 
             // No response schema placeholder found in the @SystemMessage and @UserMessage, concat it to the UserMessage.
@@ -565,7 +581,7 @@ public class AiServiceMethodImplementationSupport {
 
             // we do not need to apply the instructions as they have already been added to the template text at build time
             templateParams.put(ResponseSchemaUtil.templateParam(),
-                    createInfo.getResponseSchemaInfo().outputFormatInstructions());
+                createInfo.getResponseSchemaInfo().outputFormatInstructions());
             Prompt prompt = PromptTemplate.from(templateText).apply(templateParams);
             return createUserMessage(userName, imageContent, prompt.text());
 
@@ -574,18 +590,18 @@ public class AiServiceMethodImplementationSupport {
             Object argValue = methodArgs[paramIndex];
             if (argValue == null) {
                 throw new IllegalArgumentException(
-                        "Unable to construct UserMessage for class '" + context.aiServiceClass.getName()
-                                + "' because parameter with index "
-                                + paramIndex + " is null");
+                    "Unable to construct UserMessage for class '" + context.aiServiceClass.getName()
+                        + "' because parameter with index "
+                        + paramIndex + " is null");
             }
 
             // TODO: Understand how to enable the {response_schema} for the @StructuredPrompt.
             String text = toString(argValue);
             return createUserMessage(userName, imageContent,
-                    text.concat(createInfo.getResponseSchemaInfo().outputFormatInstructions()));
+                text.concat(createInfo.getResponseSchemaInfo().outputFormatInstructions()));
         } else {
             throw new IllegalStateException("Unable to construct UserMessage for class '" + context.aiServiceClass.getName()
-                    + "'. Please contact the maintainers");
+                + "'. Please contact the maintainers");
         }
     }
 
@@ -686,11 +702,11 @@ public class AiServiceMethodImplementationSupport {
         private final Object memoryId;
 
         public MultiEmitterConsumer(List<ChatMessage> messagesToSend,
-                List<ToolSpecification> toolSpecifications,
-                Map<String, ToolExecutor> toolExecutors,
-                List<dev.langchain4j.rag.content.Content> contents,
-                QuarkusAiServiceContext context,
-                Object memoryId) {
+            List<ToolSpecification> toolSpecifications,
+            Map<String, ToolExecutor> toolExecutors,
+            List<dev.langchain4j.rag.content.Content> contents,
+            QuarkusAiServiceContext context,
+            Object memoryId) {
             this.messagesToSend = messagesToSend;
             this.toolSpecifications = toolSpecifications;
             this.toolExecutors = toolExecutors;
@@ -702,20 +718,20 @@ public class AiServiceMethodImplementationSupport {
         @Override
         public void accept(MultiEmitter<? super String> em) {
             new AiServiceTokenStream(messagesToSend, toolSpecifications, toolExecutors, contents, context, memoryId)
-                    .onNext(em::emit)
-                    .onComplete(new Consumer<>() {
-                        @Override
-                        public void accept(Response<AiMessage> message) {
-                            em.complete();
-                        }
-                    })
-                    .onError(em::fail)
-                    .start();
+                .onNext(em::emit)
+                .onComplete(new Consumer<>() {
+                    @Override
+                    public void accept(Response<AiMessage> message) {
+                        em.complete();
+                    }
+                })
+                .onError(em::fail)
+                .start();
         }
     }
 
     private record GuardRailsResult(boolean success, Class<? extends OutputGuardrail> bean, Exception failure,
-            boolean retry, String reprompt) {
+        boolean retry, String reprompt) {
 
         static GuardRailsResult SUCCESS = new GuardRailsResult(true, null, null, false, null);
 
