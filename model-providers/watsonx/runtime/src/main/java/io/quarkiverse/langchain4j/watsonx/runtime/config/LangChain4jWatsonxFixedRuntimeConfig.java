@@ -3,6 +3,7 @@ package io.quarkiverse.langchain4j.watsonx.runtime.config;
 import static io.quarkus.runtime.annotations.ConfigPhase.BUILD_AND_RUN_TIME_FIXED;
 
 import java.util.Map;
+import java.util.Optional;
 
 import io.quarkus.runtime.annotations.ConfigDocMapKey;
 import io.quarkus.runtime.annotations.ConfigDocSection;
@@ -20,7 +21,7 @@ public interface LangChain4jWatsonxFixedRuntimeConfig {
      * Default model config.
      */
     @WithParentName
-    WatsonConfig defaultConfig();
+    WatsonxConfig defaultConfig();
 
     /**
      * Named model config.
@@ -29,9 +30,31 @@ public interface LangChain4jWatsonxFixedRuntimeConfig {
     @ConfigDocMapKey("model-name")
     @WithParentName
     @WithDefaults
-    Map<String, WatsonConfig> namedConfig();
+    Map<String, WatsonxConfig> namedConfig();
 
-    interface WatsonConfig {
+    interface WatsonxConfig {
+
+        /**
+         * Base URL of the watsonx.ai API.
+         */
+        Optional<String> baseUrl();
+
+        /**
+         * Base URL for prompts and agent tools in the watsonx.ai API.
+         * <p>
+         * If empty, this URL will be automatically calculated based on the {@code base-url}.
+         */
+        Optional<String> wxBaseUrl();
+
+        /**
+         * IBM Cloud API key.
+         */
+        Optional<String> apiKey();
+
+        /**
+         * IAM authentication related settings.
+         */
+        IAMConfig iam();
 
         /**
          * Specifies the mode of interaction with the LLM model.

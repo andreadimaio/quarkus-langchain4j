@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 
 import io.quarkiverse.langchain4j.watsonx.client.WatsonxRestApi;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
+import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxFixedRuntimeConfig;
 
 public abstract class WireMockAbstract {
 
@@ -23,6 +24,9 @@ public abstract class WireMockAbstract {
 
     @Inject
     LangChain4jWatsonxConfig langchain4jWatsonConfig;
+
+    @Inject
+    LangChain4jWatsonxFixedRuntimeConfig langchain4jWatsonFixedRuntimeConfig;
 
     @BeforeAll
     static void beforeAll() {

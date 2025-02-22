@@ -23,7 +23,7 @@ public interface LangChain4jWatsonxConfig {
      * Default model config.
      */
     @WithParentName
-    WatsonConfig defaultConfig();
+    WatsonxConfig defaultConfig();
 
     /**
      * Named model config.
@@ -31,19 +31,10 @@ public interface LangChain4jWatsonxConfig {
     @ConfigDocMapKey("model-name")
     @WithParentName
     @WithDefaults
-    Map<String, WatsonConfig> namedConfig();
+    Map<String, WatsonxConfig> namedConfig();
 
     @ConfigGroup
-    interface WatsonConfig {
-        /**
-         * Base URL of the watsonx.ai API.
-         */
-        Optional<String> baseUrl();
-
-        /**
-         * IBM Cloud API key.
-         */
-        Optional<String> apiKey();
+    interface WatsonxConfig {
 
         /**
          * Timeout for watsonx.ai calls.
@@ -93,11 +84,6 @@ public interface LangChain4jWatsonxConfig {
          */
         @WithDefault("true")
         Boolean enableIntegration();
-
-        /**
-         * IAM authentication related settings.
-         */
-        IAMConfig iam();
 
         /**
          * Chat model related settings.

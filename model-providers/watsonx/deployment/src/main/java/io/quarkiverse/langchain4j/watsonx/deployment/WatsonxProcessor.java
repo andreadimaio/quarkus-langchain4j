@@ -74,7 +74,9 @@ public class WatsonxProcessor {
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
-    void generateBeans(WatsonxRecorder recorder, LangChain4jWatsonxConfig runtimeConfig,
+    void generateBeans(
+            WatsonxRecorder recorder,
+            LangChain4jWatsonxConfig runtimeConfig,
             LangChain4jWatsonxFixedRuntimeConfig fixedRuntimeConfig,
             List<SelectedChatModelProviderBuildItem> selectedChatItem,
             List<SelectedEmbeddingModelCandidateBuildItem> selectedEmbedding,
@@ -95,11 +97,11 @@ public class WatsonxProcessor {
             Function<SyntheticCreationalContext<StreamingChatLanguageModel>, StreamingChatLanguageModel> streamingChatLanguageModel;
 
             if (mode.equalsIgnoreCase("chat")) {
-                chatLanguageModel = recorder.chatModel(runtimeConfig, configName);
-                streamingChatLanguageModel = recorder.streamingChatModel(runtimeConfig, configName);
+                chatLanguageModel = recorder.chatModel(fixedRuntimeConfig, runtimeConfig, configName);
+                streamingChatLanguageModel = recorder.streamingChatModel(fixedRuntimeConfig, runtimeConfig, configName);
             } else if (mode.equalsIgnoreCase("generation")) {
-                chatLanguageModel = recorder.generationModel(runtimeConfig, configName);
-                streamingChatLanguageModel = recorder.generationStreamingModel(runtimeConfig, configName);
+                chatLanguageModel = recorder.generationModel(fixedRuntimeConfig, runtimeConfig, configName);
+                streamingChatLanguageModel = recorder.generationStreamingModel(fixedRuntimeConfig, runtimeConfig, configName);
             } else {
                 throw new RuntimeException(
                         "The \"mode\" value for the model \"%s\" is not valid. Choose one between [\"chat\", \"generation\"]"
@@ -152,7 +154,7 @@ public class WatsonxProcessor {
                         .defaultBean()
                         .unremovable()
                         .scope(ApplicationScoped.class)
-                        .supplier(recorder.embeddingModel(runtimeConfig, configName));
+                        .supplier(recorder.embeddingModel(fixedRuntimeConfig, runtimeConfig, configName));
                 addQualifierIfNecessary(builder, configName);
                 beanProducer.produce(builder.done());
             }
@@ -167,7 +169,7 @@ public class WatsonxProcessor {
                         .defaultBean()
                         .unremovable()
                         .scope(ApplicationScoped.class)
-                        .supplier(recorder.scoringModel(runtimeConfig, configName));
+                        .supplier(recorder.scoringModel(fixedRuntimeConfig, runtimeConfig, configName));
                 addQualifierIfNecessary(builder, configName);
                 beanProducer.produce(builder.done());
             }
@@ -182,8 +184,9 @@ public class WatsonxProcessor {
 
     /**
      * When both {@code rest-client-jackson} and {@code rest-client-jsonb} are present on the classpath we need to make sure
-     * that Jackson is used. This is not a proper solution as it affects all clients, but it's better than the having the
-     * reader/writers be selected at random.
+     * that Jackson is used. This is
+     * not a proper solution as it affects all clients, but it's better than the having the reader/writers be selected at
+     * random.
      */
     @BuildStep
     public void deprioritizeJsonb(Capabilities capabilities,

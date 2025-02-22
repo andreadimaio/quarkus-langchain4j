@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.resteasy.reactive.client.api.LoggingScope;
 
 import dev.langchain4j.model.chat.listener.ChatModelListener;
+import io.quarkiverse.langchain4j.watsonx.client.WatsonxClientLogger;
 import io.quarkiverse.langchain4j.watsonx.client.WatsonxRestApi;
 import io.quarkiverse.langchain4j.watsonx.client.filter.BearerTokenHeaderFactory;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
@@ -28,7 +29,7 @@ public abstract class Watsonx {
 
         if (builder.logRequests || builder.logResponses) {
             restClientBuilder.loggingScope(LoggingScope.REQUEST_RESPONSE);
-            restClientBuilder.clientLogger(new WatsonxRestApi.WatsonClientLogger(
+            restClientBuilder.clientLogger(new WatsonxClientLogger(
                     builder.logRequests,
                     builder.logResponses));
         }

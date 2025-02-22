@@ -40,9 +40,9 @@ public class GenerationDefaultPropertiesTest extends WireMockAbstract {
 
     @RegisterExtension
     static QuarkusUnitTest unitTest = new QuarkusUnitTest()
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.base-url", WireMockUtil.URL_WATSONX_SERVER)
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.iam.base-url", WireMockUtil.URL_IAM_SERVER)
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.api-key", WireMockUtil.API_KEY)
+            .overrideConfigKey("quarkus.langchain4j.watsonx.base-url", WireMockUtil.URL_WATSONX_SERVER)
+            .overrideConfigKey("quarkus.langchain4j.watsonx.iam.base-url", WireMockUtil.URL_IAM_SERVER)
+            .overrideConfigKey("quarkus.langchain4j.watsonx.api-key", WireMockUtil.API_KEY)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.project-id", WireMockUtil.PROJECT_ID)
             .overrideConfigKey("quarkus.langchain4j.watsonx.mode", "generation")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class).addClass(WireMockUtil.class));
@@ -80,8 +80,9 @@ public class GenerationDefaultPropertiesTest extends WireMockAbstract {
     @Test
     void check_config() throws Exception {
         var runtimeConfig = langchain4jWatsonConfig.defaultConfig();
+        var fixedRuntimeConfig = langchain4jWatsonFixedRuntimeConfig.defaultConfig();
         assertEquals(Optional.empty(), runtimeConfig.timeout());
-        assertEquals(Optional.empty(), runtimeConfig.iam().timeout());
+        assertEquals(Optional.empty(), fixedRuntimeConfig.iam().timeout());
         assertEquals(false, runtimeConfig.logRequests().orElse(false));
         assertEquals(false, runtimeConfig.logResponses().orElse(false));
         assertEquals(WireMockUtil.VERSION, runtimeConfig.version());
@@ -100,7 +101,7 @@ public class GenerationDefaultPropertiesTest extends WireMockAbstract {
         assertTrue(runtimeConfig.generationModel().repetitionPenalty().isEmpty());
         assertTrue(runtimeConfig.generationModel().truncateInputTokens().isEmpty());
         assertTrue(runtimeConfig.generationModel().includeStopSequence().isEmpty());
-        assertEquals("urn:ibm:params:oauth:grant-type:apikey", runtimeConfig.iam().grantType());
+        assertEquals("urn:ibm:params:oauth:grant-type:apikey", fixedRuntimeConfig.iam().grantType());
         assertEquals(WireMockUtil.DEFAULT_EMBEDDING_MODEL, runtimeConfig.embeddingModel().modelId());
         assertTrue(runtimeConfig.embeddingModel().truncateInputTokens().isEmpty());
         assertEquals(WireMockUtil.DEFAULT_SCORING_MODEL, runtimeConfig.scoringModel().modelId());

@@ -12,12 +12,15 @@ import dev.langchain4j.model.chat.DisabledStreamingChatLanguageModel;
 import dev.langchain4j.model.embedding.DisabledEmbeddingModel;
 import io.quarkiverse.langchain4j.runtime.NamedConfigUtil;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
-import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig.WatsonConfig;
+import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig.WatsonxConfig;
+import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxFixedRuntimeConfig;
 
 class DisabledModelsWatsonRecorderTest {
+
+    LangChain4jWatsonxFixedRuntimeConfig fixedRuntimeConfig = mock(LangChain4jWatsonxFixedRuntimeConfig.class);
     LangChain4jWatsonxConfig runtimeConfig = mock(LangChain4jWatsonxConfig.class);
 
-    WatsonConfig defaultConfig = mock(WatsonConfig.class);
+    WatsonxConfig defaultConfig = mock(WatsonxConfig.class);
     WatsonxRecorder recorder = new WatsonxRecorder();
 
     @BeforeEach
@@ -32,16 +35,16 @@ class DisabledModelsWatsonRecorderTest {
     @Test
     void disabledChatModel() {
         assertThat(recorder
-                .generationModel(runtimeConfig, NamedConfigUtil.DEFAULT_NAME).apply(null))
+                .generationModel(fixedRuntimeConfig, runtimeConfig, NamedConfigUtil.DEFAULT_NAME).apply(null))
                 .isNotNull()
                 .isExactlyInstanceOf(DisabledChatLanguageModel.class);
 
         assertThat(
-                recorder.generationStreamingModel(runtimeConfig, NamedConfigUtil.DEFAULT_NAME).apply(null))
+                recorder.generationStreamingModel(fixedRuntimeConfig, runtimeConfig, NamedConfigUtil.DEFAULT_NAME).apply(null))
                 .isNotNull()
                 .isExactlyInstanceOf(DisabledStreamingChatLanguageModel.class);
 
-        assertThat(recorder.embeddingModel(runtimeConfig, NamedConfigUtil.DEFAULT_NAME).get())
+        assertThat(recorder.embeddingModel(fixedRuntimeConfig, runtimeConfig, NamedConfigUtil.DEFAULT_NAME).get())
                 .isNotNull()
                 .isExactlyInstanceOf(DisabledEmbeddingModel.class);
     }

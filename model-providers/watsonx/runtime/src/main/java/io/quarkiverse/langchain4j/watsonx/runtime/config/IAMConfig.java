@@ -21,7 +21,6 @@ public interface IAMConfig {
      * Timeout for IAM authentication calls.
      */
     @ConfigDocDefault("10s")
-    @WithDefault("${quarkus.langchain4j.timeout}")
     Optional<Duration> timeout();
 
     /**
