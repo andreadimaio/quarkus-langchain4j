@@ -6,10 +6,12 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 
 import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response.Status;
 
 import dev.langchain4j.data.image.Image;
 import dev.langchain4j.internal.Utils;
 import io.quarkiverse.langchain4j.watsonx.bean.WatsonxError;
+import io.quarkiverse.langchain4j.watsonx.exception.BuiltinToolException;
 import io.quarkiverse.langchain4j.watsonx.exception.WatsonxException;
 
 public class WatsonxUtils {
@@ -39,6 +41,15 @@ public class WatsonxUtils {
 
                 if (!optional.isPresent())
                     throw e;
+
+            } catch (BuiltinToolException e) {
+
+                if (e.statusCode() == Status.UNAUTHORIZED.getStatusCode() &&
+                        e.details().equalsIgnoreCase("jwt expired")) {
+                    // Jwt expired, retry.
+                    continue;
+                }
+                throw e;
 
             } catch (WebApplicationException e) {
                 throw e;
