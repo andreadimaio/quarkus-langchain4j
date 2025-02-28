@@ -32,6 +32,8 @@ public class WireMockUtil {
     public static final String URL_WATSONX_SERVER = "http://localhost:8089";
     public static final String URL_WATSONX_CHAT_API = "/ml/v1/text/chat?version=%s";
     public static final String URL_WATSONX_CHAT_STREAMING_API = "/ml/v1/text/chat_stream?version=%s";
+    public static final String URL_WATSONX_CHAT_AGENT_LAB_API = "/ml/v4/deployments/%s/ai_service?project_id=%s&version=%s";
+    public static final String URL_WATSONX_CHAT_STREAMING_AGENT_LAB_API = "/ml/v4/deployments/%s/ai_service_stream?project_id=%s&version=%s";
     public static final String URL_WATSONX_GENERATION_API = "/ml/v1/text/generation?version=%s";
     public static final String URL_WATSONX_GENERATION_STREAMING_API = "/ml/v1/text/generation_stream?version=%s";
     public static final String URL_WATSONX_SCORING_API = "/ml/v1/text/rerank?version=%s";
@@ -51,6 +53,7 @@ public class WireMockUtil {
     public static final String PROJECT_ID = "123123321321";
     public static final String GRANT_TYPE = "urn:ibm:params:oauth:grant-type:apikey";
     public static final String VERSION = "2024-03-14";
+    public static final String DEPLOYMENT = "7e354c85-d195-4dca-b53e-9566ae9f535b";
     public static final String DEFAULT_CHAT_MODEL = "mistralai/mistral-large";
     public static final String DEFAULT_EMBEDDING_MODEL = "ibm/slate-125m-english-rtrvr";
     public static final String DEFAULT_SCORING_MODEL = "cross-encoder/ms-marco-minilm-l-12-v2";
@@ -79,6 +82,16 @@ public class WireMockUtil {
                 ]
             }
             """;
+    public static String RESPONSE_WATSONX_AGENT_LAB_CHAT_API = """
+            {
+                "choices": [{
+                    "index": 0,
+                    "message": {
+                        "content": "The Los Angeles Dodgers won the 2020 World Series.",
+                        "role": "assistant"
+                    }
+                }]
+            }""";
     public static String RESPONSE_WATSONX_CHAT_API = """
             {
                 "id": "cmpl-15475d0dea9b4429a55843c77997f8a9",
@@ -245,6 +258,11 @@ public class WireMockUtil {
         return new WatsonxBuilder(watsonxServer, apiURL, status, version);
     }
 
+    public WatsonxBuilder mockWatsonxBuilder(String apiURL, int status, String deployment, String version,
+            String projectId) {
+        return new WatsonxBuilder(watsonxServer, apiURL, status, deployment, version, projectId);
+    }
+
     public static StreamingResponseHandler<AiMessage> streamingResponseHandler(AtomicReference<AiMessage> streamingResponse) {
         return new StreamingResponseHandler<>() {
             @Override
@@ -295,6 +313,13 @@ public class WireMockUtil {
             this.server = server;
             this.status = status;
             this.builder = post(urlEqualTo(apiURL.formatted(version)));
+        }
+
+        protected WatsonxBuilder(WireMockServer server, String apiURL, int status, String deployment, String version,
+                String projectId) {
+            this.server = server;
+            this.status = status;
+            this.builder = post(urlEqualTo(apiURL.formatted(deployment, projectId, version)));
         }
 
         protected WatsonxBuilder(WireMockServer watsonServer, String apiURL, int status) {

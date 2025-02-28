@@ -47,6 +47,9 @@ public record WatsonxError(Integer statusCode, String trace, List<Error> errors)
         TOKEN_QUOTA_REACHED,
 
         @JsonProperty("authentication_token_expired")
-        AUTHENTICATION_TOKEN_EXPIRED;
+        AUTHENTICATION_TOKEN_EXPIRED,
+
+        @JsonProperty("unauthorized")
+        UNAUTHORIZED;
     }
 }

@@ -1,10 +1,12 @@
 package io.quarkiverse.langchain4j.watsonx;
 
 import static io.quarkiverse.langchain4j.watsonx.WatsonxUtils.retryOn;
+import static java.util.Objects.isNull;
 import static java.util.stream.Collectors.joining;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -82,6 +84,7 @@ public class WatsonxChatModel extends Watsonx implements ChatLanguageModel, Stre
                 .temperature(builder.temperature)
                 .topP(builder.topP)
                 .timeLimit(builder.timeout)
+                .deploymentId(builder.deploymentId)
                 .build();
     }
 
@@ -100,14 +103,28 @@ public class WatsonxChatModel extends Watsonx implements ChatLanguageModel, Stre
                 ? toolSpecifications.stream().map(TextChatParameterTool::of).toList()
                 : null;
 
-        TextChatRequest request = new TextChatRequest(modelId, spaceId, projectId, messages, tools,
-                TextChatParameters.convert(parameters));
-        TextChatResponse response = retryOn(new Callable<TextChatResponse>() {
-            @Override
-            public TextChatResponse call() throws Exception {
-                return client.chat(request, version);
-            }
-        });
+        TextChatRequest request;
+        TextChatResponse response;
+        Optional<String> deploymentId = getDeploymentId(parameters);
+
+        if (deploymentId.isPresent()) {
+            request = new TextChatRequest(null, spaceId, projectId, messages, null, null);
+            response = retryOn(new Callable<TextChatResponse>() {
+                @Override
+                public TextChatResponse call() throws Exception {
+                    return client.chatAiAgent(deploymentId.get(), projectId, spaceId, version, request);
+                }
+            });
+        } else {
+            request = new TextChatRequest(modelId, spaceId, projectId, messages, tools,
+                    TextChatParameters.convert(parameters));
+            response = retryOn(new Callable<TextChatResponse>() {
+                @Override
+                public TextChatResponse call() throws Exception {
+                    return client.chat(request, version);
+                }
+            });
+        }
 
         TextChatResultChoice choice = response.choices().get(0);
         TextChatResultMessage message = choice.message();
@@ -121,19 +138,22 @@ public class WatsonxChatModel extends Watsonx implements ChatLanguageModel, Stre
         }
 
         var finishReason = toFinishReason(choice.finishReason());
-        var tokenUsage = new TokenUsage(
-                usage.promptTokens(),
-                usage.completionTokens(),
-                usage.totalTokens());
+        var metadata = ChatResponseMetadata.builder()
+                .id(response.id())
+                .modelName(response.modelId())
+                .finishReason(finishReason);
+
+        // When @AgentLab is used the "usage" field is null.
+        if (usage != null) {
+            metadata.tokenUsage(new TokenUsage(
+                    usage.promptTokens(),
+                    usage.completionTokens(),
+                    usage.totalTokens()));
+        }
 
         return ChatResponse.builder()
                 .aiMessage(aiMessage)
-                .metadata(ChatResponseMetadata.builder()
-                        .id(response.id())
-                        .modelName(response.modelId())
-                        .tokenUsage(tokenUsage)
-                        .finishReason(finishReason)
-                        .build())
+                .metadata(metadata.build())
                 .build();
     }
 
@@ -151,134 +171,144 @@ public class WatsonxChatModel extends Watsonx implements ChatLanguageModel, Stre
                 ? toolSpecifications.stream().map(TextChatParameterTool::of).toList()
                 : null;
 
-        TextChatRequest request = new TextChatRequest(modelId, spaceId, projectId, messages, tools,
-                TextChatParameters.convert(parameters));
         Context context = Context.empty();
         context.put(TOOLS_CONTEXT, new ArrayList<StreamingToolFetcher>());
         context.put(COMPLETE_MESSAGE_CONTEXT, new StringBuilder());
 
-        client.streamingChat(request, version)
-                .onFailure(WatsonxUtils::isTokenExpired).retry().atMost(1)
-                .subscribe()
-                .with(context,
-                        new Consumer<TextStreamingChatResponse>() {
-                            @Override
-                            public void accept(TextStreamingChatResponse chunk) {
-                                try {
+        Consumer<TextStreamingChatResponse> onItem = new Consumer<TextStreamingChatResponse>() {
+            @Override
+            public void accept(TextStreamingChatResponse chunk) {
+                try {
 
-                                    // Last message get the "usage" values
-                                    if (chunk.choices().size() == 0) {
-                                        context.put(USAGE_CONTEXT, chunk.usage());
-                                        return;
-                                    }
+                    // Last message get the "usage" values
+                    if (chunk.choices().size() == 0) {
+                        context.put(USAGE_CONTEXT, chunk.usage());
+                        return;
+                    }
 
-                                    var message = chunk.choices().get(0);
+                    var message = chunk.choices().get(0);
 
-                                    if (!context.contains(ID_CONTEXT) && chunk.id() != null) {
-                                        context.put(ID_CONTEXT, chunk.id());
-                                    }
+                    if (!context.contains(ID_CONTEXT) && chunk.id() != null) {
+                        context.put(ID_CONTEXT, chunk.id());
+                    }
 
-                                    if (!context.contains(MODEL_ID_CONTEXT) && chunk.modelId() != null) {
-                                        context.put(MODEL_ID_CONTEXT, chunk.modelId());
-                                    }
+                    if (!context.contains(MODEL_ID_CONTEXT) && chunk.modelId() != null) {
+                        context.put(MODEL_ID_CONTEXT, chunk.modelId());
+                    }
 
-                                    if (message.finishReason() != null) {
-                                        context.put(FINISH_REASON_CONTEXT, message.finishReason());
-                                    }
+                    if (message.finishReason() != null) {
+                        context.put(FINISH_REASON_CONTEXT, message.finishReason());
+                    }
 
-                                    if (message.delta().role() != null) {
-                                        context.put(ROLE_CONTEXT, message.delta().role());
-                                    }
+                    if (message.delta().role() != null) {
+                        context.put(ROLE_CONTEXT, message.delta().role());
+                    }
 
-                                    if (message.delta().toolCalls() != null) {
+                    if (message.delta().toolCalls() != null) {
 
-                                        StreamingToolFetcher toolFetcher;
+                        StreamingToolFetcher toolFetcher;
 
-                                        // During streaming there is only one element in the tool_calls,
-                                        // but the "index" field can be used to understand how many tools need to be executed.
-                                        var deltaTool = message.delta().toolCalls().get(0);
-                                        var index = deltaTool.index();
+                        // During streaming there is only one element in the tool_calls,
+                        // but the "index" field can be used to understand how many tools need to be executed.
+                        var deltaTool = message.delta().toolCalls().get(0);
+                        var index = deltaTool.index();
 
-                                        List<StreamingToolFetcher> tools = context.get(TOOLS_CONTEXT);
+                        List<StreamingToolFetcher> tools = context.get(TOOLS_CONTEXT);
 
-                                        // Check if there is an incomplete version of the TextChatToolCall object.
-                                        if ((index + 1) > tools.size()) {
-                                            // First occurrence of the object, create it.
-                                            toolFetcher = new StreamingToolFetcher(index);
-                                            tools.add(toolFetcher);
-                                        } else {
-                                            // Incomplete version is present, complete it.
-                                            toolFetcher = tools.get(index);
-                                        }
+                        // Check if there is an incomplete version of the TextChatToolCall object.
+                        if ((index + 1) > tools.size()) {
+                            // First occurrence of the object, create it.
+                            toolFetcher = new StreamingToolFetcher(index);
+                            tools.add(toolFetcher);
+                        } else {
+                            // Incomplete version is present, complete it.
+                            toolFetcher = tools.get(index);
+                        }
 
-                                        toolFetcher.setId(deltaTool.id());
-                                        toolFetcher.setType(deltaTool.type());
+                        toolFetcher.setId(deltaTool.id());
+                        toolFetcher.setType(deltaTool.type());
 
-                                        if (deltaTool.function() != null) {
-                                            toolFetcher.setName(deltaTool.function().name());
-                                            toolFetcher.appendArguments(deltaTool.function().arguments());
-                                        }
-                                    }
+                        if (deltaTool.function() != null) {
+                            toolFetcher.setName(deltaTool.function().name());
+                            toolFetcher.appendArguments(deltaTool.function().arguments());
+                        }
+                    }
 
-                                    if (message.delta().content() != null) {
+                    if (message.delta().content() != null) {
 
-                                        StringBuilder stringBuilder = context.get(COMPLETE_MESSAGE_CONTEXT);
-                                        String token = message.delta().content();
+                        StringBuilder stringBuilder = context.get(COMPLETE_MESSAGE_CONTEXT);
+                        String token = message.delta().content();
 
-                                        if (token.isEmpty())
-                                            return;
+                        if (token.isEmpty())
+                            return;
 
-                                        stringBuilder.append(token);
-                                        handler.onPartialResponse(token);
-                                    }
+                        stringBuilder.append(token);
+                        handler.onPartialResponse(token);
+                    }
 
-                                } catch (Exception e) {
-                                    handler.onError(e);
-                                }
-                            }
-                        },
-                        new Consumer<Throwable>() {
-                            @Override
-                            public void accept(Throwable error) {
-                                handler.onError(error);
-                            }
-                        },
-                        new Runnable() {
-                            @Override
-                            public void run() {
+                } catch (Exception e) {
+                    handler.onError(e);
+                }
+            }
+        };
 
-                                String id = context.get(ID_CONTEXT);
-                                String modelId = context.get(MODEL_ID_CONTEXT);
-                                String finishReason = context.get(FINISH_REASON_CONTEXT);
-                                TextStreamingChatResponse.TextChatUsage textChatUsage = context.get(USAGE_CONTEXT);
-                                TokenUsage tokenUsage = textChatUsage.toTokenUsage();
+        Consumer<Throwable> onFailure = new Consumer<Throwable>() {
+            @Override
+            public void accept(Throwable error) {
+                handler.onError(error);
+            }
+        };
 
-                                var chatResponse = ChatResponse.builder()
-                                        .metadata(ChatResponseMetadata.builder()
-                                                .id(id)
-                                                .modelName(modelId)
-                                                .tokenUsage(tokenUsage)
-                                                .finishReason(toFinishReason(finishReason))
-                                                .build());
+        Runnable onComplete = new Runnable() {
+            @Override
+            public void run() {
 
-                                if (finishReason.equals("tool_calls")) {
+                String id = context.get(ID_CONTEXT);
+                String modelId = context.get(MODEL_ID_CONTEXT);
+                String finishReason = context.get(FINISH_REASON_CONTEXT);
+                TextStreamingChatResponse.TextChatUsage textChatUsage = context.get(USAGE_CONTEXT);
+                TokenUsage tokenUsage = textChatUsage.toTokenUsage();
 
-                                    List<StreamingToolFetcher> tools = context.get(TOOLS_CONTEXT);
-                                    List<ToolExecutionRequest> toolExecutionRequests = tools.stream()
-                                            .map(StreamingToolFetcher::build).map(TextChatToolCall::convert).toList();
+                var chatResponse = ChatResponse.builder()
+                        .metadata(ChatResponseMetadata.builder()
+                                .id(id)
+                                .modelName(modelId)
+                                .tokenUsage(tokenUsage)
+                                .finishReason(toFinishReason(finishReason))
+                                .build());
 
-                                    handler.onCompleteResponse(
-                                            chatResponse.aiMessage(AiMessage.from(toolExecutionRequests)).build());
+                if (finishReason.equals("tool_calls")) {
 
-                                } else {
+                    List<StreamingToolFetcher> tools = context.get(TOOLS_CONTEXT);
+                    List<ToolExecutionRequest> toolExecutionRequests = tools.stream()
+                            .map(StreamingToolFetcher::build).map(TextChatToolCall::convert).toList();
 
-                                    StringBuilder message = context.get(COMPLETE_MESSAGE_CONTEXT);
-                                    AiMessage aiMessage = AiMessage.from(message.toString());
+                    handler.onCompleteResponse(
+                            chatResponse.aiMessage(AiMessage.from(toolExecutionRequests)).build());
 
-                                    handler.onCompleteResponse(chatResponse.aiMessage(aiMessage).build());
-                                }
-                            }
-                        });
+                } else {
+
+                    StringBuilder message = context.get(COMPLETE_MESSAGE_CONTEXT);
+                    AiMessage aiMessage = AiMessage.from(message.toString());
+
+                    handler.onCompleteResponse(chatResponse.aiMessage(aiMessage).build());
+                }
+            }
+        };
+
+        Optional<String> deploymentId = getDeploymentId(parameters);
+        if (deploymentId.isPresent()) {
+            TextChatRequest request = new TextChatRequest(null, spaceId, projectId, messages, null, null);
+            client.streamingChatAiAgent(deploymentId.get(), projectId, spaceId, version, request)
+                    .onFailure(WatsonxUtils::isTokenExpired).retry().atMost(1)
+                    .subscribe().with(context, onItem, onFailure, onComplete);
+        } else {
+            TextChatRequest request = new TextChatRequest(modelId, spaceId, projectId, messages, tools,
+                    TextChatParameters.convert(parameters));
+            client.streamingChat(request, version)
+                    .onFailure(WatsonxUtils::isTokenExpired).retry().atMost(1)
+                    .subscribe().with(context, onItem, onFailure, onComplete);
+        }
     }
 
     @Override
@@ -396,6 +426,17 @@ public class WatsonxChatModel extends Watsonx implements ChatLanguageModel, Stre
         return new Builder();
     }
 
+    private Optional<String> getDeploymentId(ChatRequestParameters parameters) {
+        if (isNull(parameters))
+            return Optional.empty();
+
+        if (parameters instanceof WatsonxChatRequestParameters watsonxParameters) {
+            return Optional.ofNullable(watsonxParameters.deploymentId());
+        }
+
+        return Optional.empty();
+    }
+
     private FinishReason toFinishReason(String reason) {
         if (reason == null)
             return FinishReason.OTHER;
@@ -424,6 +465,7 @@ public class WatsonxChatModel extends Watsonx implements ChatLanguageModel, Stre
         private List<String> stop;
         private Double temperature;
         private Double topP;
+        private String deploymentId;
 
         public Builder toolChoice(ToolChoice toolChoice) {
             this.toolChoice = toolChoice;
@@ -487,6 +529,11 @@ public class WatsonxChatModel extends Watsonx implements ChatLanguageModel, Stre
 
         public Builder responseFormat(ResponseFormat responseFormat) {
             this.responseFormat = responseFormat;
+            return this;
+        }
+
+        public Builder deploymentId(String deploymentId) {
+            this.deploymentId = deploymentId;
             return this;
         }
 

@@ -51,6 +51,11 @@ public class WatsonxUtils {
                 if (c.isPresent() && WatsonxError.Code.AUTHENTICATION_TOKEN_EXPIRED.equals(c.get())) {
                     optional = Optional.of(c.get());
                     break;
+                } else if (c.isPresent() &&
+                        WatsonxError.Code.UNAUTHORIZED.equals(c.get()) &&
+                        error.message().contains("expired token")) {
+                    optional = Optional.of(c.get());
+                    break;
                 }
             }
 

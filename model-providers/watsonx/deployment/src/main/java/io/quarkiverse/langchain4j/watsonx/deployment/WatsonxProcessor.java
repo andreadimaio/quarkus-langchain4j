@@ -6,8 +6,11 @@ import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.SCORING_
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.STREAMING_CHAT_MODEL;
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.TOKEN_COUNT_ESTIMATOR;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -16,6 +19,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget.Kind;
+import org.jboss.jandex.AnnotationValue;
+import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
@@ -35,6 +40,7 @@ import io.quarkiverse.langchain4j.deployment.items.SelectedChatModelProviderBuil
 import io.quarkiverse.langchain4j.deployment.items.SelectedEmbeddingModelCandidateBuildItem;
 import io.quarkiverse.langchain4j.deployment.items.SelectedScoringModelProviderBuildItem;
 import io.quarkiverse.langchain4j.runtime.NamedConfigUtil;
+import io.quarkiverse.langchain4j.watsonx.deployment.items.AgentLabBuildItem;
 import io.quarkiverse.langchain4j.watsonx.deployment.items.BuiltinToolClassBuildItem;
 import io.quarkiverse.langchain4j.watsonx.runtime.BuiltinToolRecorder;
 import io.quarkiverse.langchain4j.watsonx.runtime.WatsonxRecorder;
@@ -170,12 +176,83 @@ public class WatsonxProcessor {
     }
 
     @BuildStep
+    void discoverAgentLabAnnotations(
+            CombinedIndexBuildItem indexBuildItem,
+            LangChain4jWatsonxFixedRuntimeConfig fixedRuntimeConfig,
+            List<SelectedChatModelProviderBuildItem> selectedChatItem,
+            BuildProducer<AgentLabBuildItem> producer) {
+
+        if (selectedChatItem.isEmpty())
+            return; // Nothing to produce..
+
+        IndexView indexView = indexBuildItem.getIndex();
+        Collection<AnnotationInstance> annotationInstances = indexView.getAnnotations(WatsonxDotNames.AGENT_LAB);
+        for (AnnotationInstance annotationInstance : annotationInstances) {
+
+            ClassInfo clazz = annotationInstance.target().asClass();
+
+            if (!clazz.hasAnnotation(LangChain4jDotNames.REGISTER_AI_SERVICES)) {
+                throw new RuntimeException("The @AgentLab annotation must used in a @RegisteredAiService. Offending class is %s"
+                        .formatted(clazz.name()));
+            }
+
+            String deploymentId = annotationInstance.value().asString();
+            if (Objects.isNull(deploymentId) || deploymentId.isBlank()) {
+                throw new RuntimeException("The @AgentLab cannot have a null or empty value. Offending class is %s"
+                        .formatted(clazz.name()));
+            }
+
+            String configName = Optional
+                    .ofNullable(clazz.annotation(LangChain4jDotNames.REGISTER_AI_SERVICES).value("modelName"))
+                    .map(AnnotationValue::asString)
+                    .orElse(NamedConfigUtil.DEFAULT_NAME);
+
+            boolean isAWatsonxRegisterAiService = selectedChatItem.stream()
+                    .filter(chatItem -> chatItem.getProvider().equals(PROVIDER))
+                    .filter(chatItem -> chatItem.getConfigName().equals(configName))
+                    .findFirst().isPresent();
+
+            if (!isAWatsonxRegisterAiService) {
+                continue; // The developer is using the @AgentLab annotation not for the watsonx.ai provider.
+            }
+
+            String mode = NamedConfigUtil.isDefault(configName)
+                    ? fixedRuntimeConfig.defaultConfig().mode()
+                    : fixedRuntimeConfig.namedConfig().get(configName).mode();
+
+            if (!mode.equalsIgnoreCase("chat")) {
+                throw new RuntimeException(
+                        "The @AgentLab can only be used in chat mode. Change the quarkus.langchain4j%s.watsonx.mode property from \"generation\" to \"chat\""
+                                .formatted(NamedConfigUtil.isDefault(configName) ? "" : "." + configName));
+            }
+
+            if (clazz.hasAnnotation(LangChain4jDotNames.SYSTEM_MESSAGE)) {
+                throw new RuntimeException(
+                        "You cannot use the @SystemMessage annotation in conjunction with the use of @AgentLab. The content of the @SystemMessage must be configured in the agent created in watsonx.ai agent lab UI. Offending class is %s"
+                                .formatted(clazz.name()));
+            }
+
+            boolean aiServiceHasTools = Optional
+                    .ofNullable(clazz.annotation(LangChain4jDotNames.REGISTER_AI_SERVICES).value("tools"))
+                    .isPresent();
+
+            if (aiServiceHasTools || clazz.hasAnnotation(ToolBox.class))
+                throw new RuntimeException(
+                        "You cannot use tools in conjunction with the use of @AgentLab. The content of the tools must be configured in the agent created in watsonx.ai agent lab UI. Offending class is %s"
+                                .formatted(clazz.name()));
+
+            producer.produce(new AgentLabBuildItem(configName, deploymentId));
+        }
+    }
+
+    @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     void generateLangchain4jBeans(
             WatsonxRecorder recorder,
             LangChain4jWatsonxConfig runtimeConfig,
             LangChain4jWatsonxFixedRuntimeConfig fixedRuntimeConfig,
             List<SelectedChatModelProviderBuildItem> selectedChatItem,
+            List<AgentLabBuildItem> selectedAgentLabChatItem,
             List<SelectedEmbeddingModelCandidateBuildItem> selectedEmbedding,
             List<SelectedScoringModelProviderBuildItem> selectedScoring,
             BuildProducer<SyntheticBeanBuildItem> beanProducer) {
@@ -194,8 +271,14 @@ public class WatsonxProcessor {
             Function<SyntheticCreationalContext<StreamingChatLanguageModel>, StreamingChatLanguageModel> streamingChatLanguageModel;
 
             if (mode.equalsIgnoreCase("chat")) {
-                chatLanguageModel = recorder.chatModel(fixedRuntimeConfig, runtimeConfig, configName);
-                streamingChatLanguageModel = recorder.streamingChatModel(fixedRuntimeConfig, runtimeConfig, configName);
+                String deploymentId = selectedAgentLabChatItem.stream()
+                        .filter(agentLabChatItem -> agentLabChatItem.getConfigName().equals(configName))
+                        .findFirst()
+                        .map(AgentLabBuildItem::getDeploymentId)
+                        .orElse(null);
+                chatLanguageModel = recorder.chatModel(fixedRuntimeConfig, runtimeConfig, configName, deploymentId);
+                streamingChatLanguageModel = recorder.streamingChatModel(fixedRuntimeConfig, runtimeConfig, configName,
+                        deploymentId);
             } else if (mode.equalsIgnoreCase("generation")) {
                 chatLanguageModel = recorder.generationModel(fixedRuntimeConfig, runtimeConfig, configName);
                 streamingChatLanguageModel = recorder.generationStreamingModel(fixedRuntimeConfig, runtimeConfig, configName);
@@ -292,8 +375,9 @@ public class WatsonxProcessor {
 
     /**
      * When both {@code rest-client-jackson} and {@code rest-client-jsonb} are present on the classpath we need to make sure
-     * that Jackson is used. This is not a proper solution as it affects all clients, but it's better than the having the
-     * reader/writers be selected at random.
+     * that Jackson is used. This is
+     * not a proper solution as it affects all clients, but it's better than the having the reader/writers be selected at
+     * random.
      */
     @BuildStep
     public void deprioritizeJsonb(Capabilities capabilities,
