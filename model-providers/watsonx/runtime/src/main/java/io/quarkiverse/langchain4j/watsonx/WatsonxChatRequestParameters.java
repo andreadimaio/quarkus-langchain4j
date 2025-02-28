@@ -17,6 +17,7 @@ public class WatsonxChatRequestParameters extends DefaultChatRequestParameters {
     private Integer seed;
     private String toolChoiceName;
     private Duration timeLimit;
+    private String deploymentId;
 
     private WatsonxChatRequestParameters(Builder builder) {
         super(builder);
@@ -27,6 +28,7 @@ public class WatsonxChatRequestParameters extends DefaultChatRequestParameters {
         this.seed = builder.seed;
         this.toolChoiceName = builder.toolChoiceName;
         this.timeLimit = builder.timeLimit;
+        this.deploymentId = builder.deploymentId;
     }
 
     public Map<String, Integer> logitBias() {
@@ -57,6 +59,10 @@ public class WatsonxChatRequestParameters extends DefaultChatRequestParameters {
         return timeLimit;
     }
 
+    public String deploymentId() {
+        return deploymentId;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -78,6 +84,7 @@ public class WatsonxChatRequestParameters extends DefaultChatRequestParameters {
         private Integer seed;
         private String toolChoiceName;
         private Duration timeLimit;
+        private String deploymentId;
 
         @Override
         public Builder overrideWith(ChatRequestParameters parameters) {
@@ -91,6 +98,7 @@ public class WatsonxChatRequestParameters extends DefaultChatRequestParameters {
                 seed(getOrDefault(watsonxParameters.seed(), seed));
                 toolChoiceName(getOrDefault(watsonxParameters.toolChoiceName(), toolChoiceName));
                 timeLimit(getOrDefault(watsonxParameters.timeLimit(), timeLimit));
+                deploymentId(getOrDefault(watsonxParameters.deploymentId(), deploymentId));
             }
             return this;
         }
@@ -127,6 +135,11 @@ public class WatsonxChatRequestParameters extends DefaultChatRequestParameters {
 
         public Builder timeLimit(Duration timeLimit) {
             this.timeLimit = timeLimit;
+            return this;
+        }
+
+        public Builder deploymentId(String deploymentId) {
+            this.deploymentId = deploymentId;
             return this;
         }
 

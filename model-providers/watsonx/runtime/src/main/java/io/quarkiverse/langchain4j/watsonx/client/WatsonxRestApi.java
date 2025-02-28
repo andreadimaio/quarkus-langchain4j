@@ -37,62 +37,80 @@ import io.smallrye.mutiny.Multi;
 
 /**
  * This Microprofile REST client is used as the building block of all the API calls to watsonx. The implementation is provided
- * by
- * the Reactive REST Client in Quarkus.
+ * by the Reactive REST
+ * Client in Quarkus.
  */
-@Path("/ml/v1")
+@Path("/ml")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public interface WatsonxRestApi {
 
     @POST
-    @Path("text/generation")
+    @Path("/v1/text/generation")
     TextGenerationResponse generation(TextGenerationRequest request,
             @QueryParam("version") String version);
 
     @POST
-    @Path("text/generation_stream")
+    @Path("/v1/text/generation_stream")
     @RestStreamElementType(MediaType.APPLICATION_JSON)
     Multi<TextGenerationResponse> generationStreaming(TextGenerationRequest request,
             @QueryParam("version") String version);
 
     @POST
-    @Path("text/chat")
+    @Path("/v1/text/chat")
     TextChatResponse chat(TextChatRequest request,
             @QueryParam("version") String version);
 
     @POST
-    @Path("text/chat_stream")
+    @Path("/v1/text/chat_stream")
     @RestStreamElementType(MediaType.APPLICATION_JSON)
     Multi<TextStreamingChatResponse> streamingChat(TextChatRequest request,
             @QueryParam("version") String version);
 
     @POST
-    @Path("text/rerank")
+    @Path("/v1/text/rerank")
     ScoringResponse rerank(ScoringRequest request,
             @QueryParam("version") String version);
 
     @POST
-    @Path("text/tokenization")
+    @Path("/v1/text/tokenization")
     TokenizationResponse tokenization(TokenizationRequest request,
             @QueryParam("version") String version);
 
     @POST
-    @Path("/text/embeddings")
+    @Path("/v1/text/embeddings")
     EmbeddingResponse embeddings(EmbeddingRequest request,
             @QueryParam("version") String version);
 
     @POST
-    @Path("/text/extractions")
+    @Path("/v1/text/extractions")
     TextExtractionResponse startTextExtractionJob(TextExtractionRequest request,
             @QueryParam("version") String version);
 
     @GET
-    @Path("text/extractions/{id}")
+    @Path("/v1/text/extractions/{id}")
     TextExtractionResponse getTextExtractionDetails(@PathParam("id") String id,
             @QueryParam("space_id") String spaceId,
             @QueryParam("project_id") String projectId,
             @QueryParam("version") String version);
+
+    @POST
+    @Path("/v4/deployments/{deploymentId}/ai_service")
+    TextChatResponse chatAiAgent(
+            @PathParam("deploymentId") String deploymentId,
+            @QueryParam("project_id") String projectId,
+            @QueryParam("space_id") String spaceId,
+            @QueryParam("version") String version,
+            TextChatRequest request);
+
+    @POST
+    @Path("/v4/deployments/{deploymentId}/ai_service_stream")
+    Multi<TextStreamingChatResponse> streamingChatAiAgent(
+            @PathParam("deploymentId") String deploymentId,
+            @QueryParam("project_id") String projectId,
+            @QueryParam("space_id") String spaceId,
+            @QueryParam("version") String version,
+            TextChatRequest request);
 
     @ClientExceptionMapper
     static WatsonxException toException(jakarta.ws.rs.core.Response response) {

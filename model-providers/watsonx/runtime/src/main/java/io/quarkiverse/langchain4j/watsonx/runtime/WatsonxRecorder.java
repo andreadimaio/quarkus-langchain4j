@@ -50,13 +50,13 @@ public class WatsonxRecorder {
     public Function<SyntheticCreationalContext<ChatLanguageModel>, ChatLanguageModel> chatModel(
             LangChain4jWatsonxFixedRuntimeConfig fixedRuntimeConfig,
             LangChain4jWatsonxConfig runtimeConfig,
-            String configName) {
+            String configName, String deploymentId) {
 
         var watsonxRuntimeConfig = correspondingWatsonxRuntimeConfig(runtimeConfig, configName);
         var watsonxFixedRuntimeConfig = correspondingWatsonxFixedRuntimeConfig(fixedRuntimeConfig, configName);
 
         if (watsonxRuntimeConfig.enableIntegration()) {
-            var builder = chatBuilder(fixedRuntimeConfig, runtimeConfig, configName);
+            var builder = chatBuilder(fixedRuntimeConfig, runtimeConfig, configName, deploymentId);
             var apiKey = firstOrDefault(
                     null,
                     watsonxFixedRuntimeConfig.apiKey(),
@@ -87,13 +87,13 @@ public class WatsonxRecorder {
     public Function<SyntheticCreationalContext<StreamingChatLanguageModel>, StreamingChatLanguageModel> streamingChatModel(
             LangChain4jWatsonxFixedRuntimeConfig fixedRuntimeConfig,
             LangChain4jWatsonxConfig runtimeConfig,
-            String configName) {
+            String configName, String deploymentId) {
 
         var watsonxRuntimeConfig = correspondingWatsonxRuntimeConfig(runtimeConfig, configName);
         var watsonxFixedRuntimeConfig = correspondingWatsonxFixedRuntimeConfig(fixedRuntimeConfig, configName);
 
         if (watsonxRuntimeConfig.enableIntegration()) {
-            var builder = chatBuilder(fixedRuntimeConfig, runtimeConfig, configName);
+            var builder = chatBuilder(fixedRuntimeConfig, runtimeConfig, configName, deploymentId);
             var apiKey = firstOrDefault(
                     null,
                     watsonxFixedRuntimeConfig.apiKey(),
@@ -320,7 +320,7 @@ public class WatsonxRecorder {
     }
 
     private WatsonxChatModel.Builder chatBuilder(LangChain4jWatsonxFixedRuntimeConfig fixedRuntimeConfig,
-            LangChain4jWatsonxConfig runtimeConfig, String configName) {
+            LangChain4jWatsonxConfig runtimeConfig, String configName, String deploymentId) {
 
         var watsonxFixedRuntimeConfig = correspondingWatsonxFixedRuntimeConfig(fixedRuntimeConfig, configName);
         var watsonxRuntimeConfig = correspondingWatsonxRuntimeConfig(runtimeConfig, configName);
