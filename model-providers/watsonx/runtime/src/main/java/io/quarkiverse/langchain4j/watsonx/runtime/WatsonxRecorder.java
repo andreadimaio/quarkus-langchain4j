@@ -2,6 +2,7 @@ package io.quarkiverse.langchain4j.watsonx.runtime;
 
 import static dev.langchain4j.model.chat.request.ToolChoice.REQUIRED;
 import static io.quarkiverse.langchain4j.runtime.OptionalUtil.firstOrDefault;
+
 import java.net.URI;
 import java.net.URL;
 import java.time.Duration;
@@ -11,6 +12,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.util.TypeLiteral;
+
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.DisabledChatLanguageModel;
 import dev.langchain4j.model.chat.DisabledStreamingChatLanguageModel;
@@ -37,8 +42,6 @@ import io.quarkiverse.langchain4j.watsonx.runtime.config.ScoringModelConfig;
 import io.quarkus.arc.SyntheticCreationalContext;
 import io.quarkus.runtime.annotations.Recorder;
 import io.smallrye.config.ConfigValidationException;
-import jakarta.enterprise.inject.Instance;
-import jakarta.enterprise.util.TypeLiteral;
 
 @Recorder
 public class WatsonxRecorder {

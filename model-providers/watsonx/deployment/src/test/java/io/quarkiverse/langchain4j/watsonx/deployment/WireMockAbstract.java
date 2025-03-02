@@ -48,12 +48,12 @@ public abstract class WireMockAbstract {
     }
 
     @BeforeEach
-    void beforeEach() {
+    void beforeEach() throws Exception {
         watsonxServer.resetAll();
         iamServer.resetAll();
         handlerBeforeEach();
     }
 
-    void handlerBeforeEach() {
+    void handlerBeforeEach() throws Exception {
     };
 }
