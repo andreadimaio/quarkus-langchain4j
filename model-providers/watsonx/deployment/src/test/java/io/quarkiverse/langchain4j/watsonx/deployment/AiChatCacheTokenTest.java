@@ -17,6 +17,7 @@ import jakarta.ws.rs.core.MediaType;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -48,10 +49,16 @@ public class AiChatCacheTokenTest extends WireMockAbstract {
     @RegisterExtension
     static QuarkusUnitTest unitTest = new QuarkusUnitTest()
             .overrideConfigKey("quarkus.langchain4j.watsonx.base-url", WireMockUtil.URL_WATSONX_SERVER)
+            .overrideConfigKey("quarkus.langchain4j.watsonx.wx-base-url", WireMockUtil.URL_WX_SERVER)
             .overrideConfigKey("quarkus.langchain4j.watsonx.iam.base-url", WireMockUtil.URL_IAM_SERVER)
             .overrideConfigKey("quarkus.langchain4j.watsonx.api-key", WireMockUtil.API_KEY)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.project-id", WireMockUtil.PROJECT_ID)
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class).addClass(WireMockUtil.class));
+
+    @AfterEach
+    void afterEach() throws Exception {
+        Thread.sleep(cacheTimeout);
+    }
 
     @Inject
     ChatLanguageModel chatModel;
