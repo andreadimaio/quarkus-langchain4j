@@ -3,6 +3,7 @@ package io.quarkiverse.langchain4j.watsonx.client;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.StreamSupport.stream;
 
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,6 +29,11 @@ public class WatsonxClientLogger implements ClientLogger {
     public WatsonxClientLogger(boolean logRequests, boolean logResponses) {
         this.logRequests = logRequests;
         this.logResponses = logResponses;
+    }
+
+    public WatsonxClientLogger(Optional<Boolean> logRequests, Optional<Boolean> logResponses) {
+        this.logRequests = logRequests.orElse(false);
+        this.logResponses = logResponses.orElse(false);
     }
 
     @Override

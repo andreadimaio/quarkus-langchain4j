@@ -33,6 +33,11 @@ public interface LangChain4jWatsonxConfig {
     @WithDefaults
     Map<String, WatsonxConfig> namedConfig();
 
+    /**
+     * Configuration for built-in tools available in Watsonx.ai.
+     */
+    BuiltinToolConfig builtinTool();
+
     @ConfigGroup
     interface WatsonxConfig {
 

@@ -38,6 +38,10 @@ public class WireMockUtil {
     public static final String URL_WATSONX_EMBEDDING_API = "/ml/v1/text/embeddings?version=%s";
     public static final String URL_WATSONX_TOKENIZER_API = "/ml/v1/text/tokenization?version=%s";
 
+    public static final int PORT_WX_SERVER = 8091;
+    public static final String URL_WX_SERVER = "http://localhost:8091";
+    public static final String URL_WX_AGENT_TOOL_RUN = "/v1-beta/utility_agent_tools/run";
+
     public static final int PORT_IAM_SERVER = 8090;
     public static final String URL_IAM_SERVER = "http://localhost:8090";
     public static final String URL_IAM_GENERATE_TOKEN = "/identity/token";
@@ -216,10 +220,12 @@ public class WireMockUtil {
             """;
 
     WireMockServer iamServer;
-    WireMockServer watsonServer;
+    WireMockServer watsonxServer;
+    WireMockServer wxServer;
 
-    public WireMockUtil(WireMockServer watsonServer, WireMockServer iamServer) {
-        this.watsonServer = watsonServer;
+    public WireMockUtil(WireMockServer watsonxServer, WireMockServer wxServer, WireMockServer iamServer) {
+        this.watsonxServer = watsonxServer;
+        this.wxServer = wxServer;
         this.iamServer = iamServer;
     }
 
@@ -228,11 +234,15 @@ public class WireMockUtil {
     }
 
     public WatsonxBuilder mockWatsonxBuilder(String apiURL, int status) {
-        return new WatsonxBuilder(watsonServer, apiURL, status);
+        return new WatsonxBuilder(watsonxServer, apiURL, status);
+    }
+
+    public WatsonxBuilder mockWxBuilder(String apiURL, int status) {
+        return new WatsonxBuilder(wxServer, apiURL, status);
     }
 
     public WatsonxBuilder mockWatsonxBuilder(String apiURL, int status, String version) {
-        return new WatsonxBuilder(watsonServer, apiURL, status, version);
+        return new WatsonxBuilder(watsonxServer, apiURL, status, version);
     }
 
     public static StreamingResponseHandler<AiMessage> streamingResponseHandler(AtomicReference<AiMessage> streamingResponse) {
@@ -279,16 +289,16 @@ public class WireMockUtil {
         private String responseMediaType = MediaType.APPLICATION_JSON;
         private String response;
         private int status;
-        private WireMockServer watsonServer;
+        private WireMockServer server;
 
-        protected WatsonxBuilder(WireMockServer watsonServer, String apiURL, int status, String version) {
-            this.watsonServer = watsonServer;
+        protected WatsonxBuilder(WireMockServer server, String apiURL, int status, String version) {
+            this.server = server;
             this.status = status;
             this.builder = post(urlEqualTo(apiURL.formatted(version)));
         }
 
         protected WatsonxBuilder(WireMockServer watsonServer, String apiURL, int status) {
-            this.watsonServer = watsonServer;
+            this.server = watsonServer;
             this.status = status;
             this.builder = post(urlEqualTo(apiURL.formatted(VERSION)));
         }
@@ -302,6 +312,11 @@ public class WireMockUtil {
 
         public WatsonxBuilder body(String body) {
             builder.withRequestBody(equalToJson(body));
+            return this;
+        }
+
+        public WatsonxBuilder bodyIgnoreOrder(String body) {
+            builder.withRequestBody(equalToJson(body, true, false));
             return this;
         }
 
@@ -326,7 +341,7 @@ public class WireMockUtil {
         }
 
         public StubMapping build() {
-            return watsonServer.stubFor(
+            return server.stubFor(
                     builder
                             .withHeader("Authorization", equalTo("Bearer %s".formatted(token)))
                             .willReturn(aResponse()

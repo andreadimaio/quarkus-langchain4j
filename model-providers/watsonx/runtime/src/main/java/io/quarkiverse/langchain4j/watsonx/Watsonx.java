@@ -12,6 +12,7 @@ import dev.langchain4j.model.chat.listener.ChatModelListener;
 import io.quarkiverse.langchain4j.watsonx.client.WatsonxClientLogger;
 import io.quarkiverse.langchain4j.watsonx.client.WatsonxRestApi;
 import io.quarkiverse.langchain4j.watsonx.client.filter.BearerTokenHeaderFactory;
+import io.quarkiverse.langchain4j.watsonx.runtime.TokenGenerator;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
 public abstract class Watsonx {
@@ -73,7 +74,7 @@ public abstract class Watsonx {
         protected URL url;
         protected boolean logResponses;
         protected boolean logRequests;
-        protected WatsonxTokenGenerator tokenGenerator;
+        protected TokenGenerator tokenGenerator;
         private List<ChatModelListener> listeners = Collections.emptyList();
 
         public T modelId(String modelId) {
@@ -111,7 +112,7 @@ public abstract class Watsonx {
             return (T) this;
         }
 
-        public T tokenGenerator(WatsonxTokenGenerator tokenGenerator) {
+        public T tokenGenerator(TokenGenerator tokenGenerator) {
             this.tokenGenerator = tokenGenerator;
             return (T) this;
         }

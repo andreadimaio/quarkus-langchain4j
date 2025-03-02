@@ -34,6 +34,7 @@ The `base-url` property depends on the region of the provided service instance, 
 * London: https://eu-gb.ml.cloud.ibm.com
 * Tokyo: https://jp-tok.ml.cloud.ibm.com
 * Sydney: https://au-syd.ml.cloud.ibm.com
+* Toronto: https://ca-tor.ml.cloud.ibm.com
 
 [source,properties,subs=attributes+]
 ----
@@ -138,7 +139,37 @@ public interface AiService {
 }
 ----
 
-NOTE: The `@SystemMessage` and `@UserMessage` annotations are joined by default with no separator (an empty string `""`). If you want to change this behavior, use the property `quarkus.langchain4j.watsonx.generation-model.prompt-joiner=<value>`. 
+NOTE: The `@SystemMessage` and `@UserMessage` annotations are joined by default with no separator (an empty string `""`). If you want to change this behavior, use the property `quarkus.langchain4j.watsonx.generation-model.prompt-joiner=<value>`.
+
+=== Tools 
+
+When using `chat` mode, you can extend the capabilities of your AI service by integrating tools. Tools allow the model to perform actions beyond text-based conversation, such as retrieving external information, searching online, or executing custom-defined tasks.
+
+NOTE: Not all models available in `watsonx.ai` support tools. Before enabling tools, check the documentation of the specific model you are using.
+
+==== Using Tools
+
+You can register tools in your AI service by using the `@ToolBox` annotation or specifying them in `@RegisterAiService`. Tools can be either *built-in* or *custom*.
+
+* **Built-in tools** - Predefined tools that provide common functionalities.
+* **Custom tools** - You can create your own tools to integrate specific actions required by your application.  
+  For more details on creating custom tools, refer to the 
+  link:https://docs.quarkiverse.io/quarkus-langchain4j/dev/agent-and-tools.html[Agent and Tools] page.
+
+==== Built-in Tools
+
+The following built-in tools are available:
+
+* `WebCrawlerTool` - Fetches the content of a single web page.
+* `GoogleSearchTool` - Searches for online trends, news, current events, real-time information, or research topics.
+* `WeatherTool` - Retrieves weather information for a specified city.
+
+These tools can be used in two ways:
+
+1. **As tools** within an AI service, using the `@ToolBox` annotation and `@RegisterAiService(tools = ...)`.
+2. **Injected directly** into your service or class using the `@Inject` annotation.
+
+NOTE: Tools are supported *only in chat mode*.
 
 ==== All configuration properties
 

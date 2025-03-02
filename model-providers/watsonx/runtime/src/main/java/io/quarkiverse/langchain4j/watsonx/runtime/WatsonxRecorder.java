@@ -2,14 +2,13 @@ package io.quarkiverse.langchain4j.watsonx.runtime;
 
 import static dev.langchain4j.model.chat.request.ToolChoice.REQUIRED;
 import static io.quarkiverse.langchain4j.runtime.OptionalUtil.firstOrDefault;
+import static io.quarkiverse.langchain4j.watsonx.runtime.TokenGenerationCache.getOrCreateTokenGenerator;
 
 import java.net.URI;
 import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -31,11 +30,9 @@ import io.quarkiverse.langchain4j.watsonx.WatsonxChatModel;
 import io.quarkiverse.langchain4j.watsonx.WatsonxEmbeddingModel;
 import io.quarkiverse.langchain4j.watsonx.WatsonxGenerationModel;
 import io.quarkiverse.langchain4j.watsonx.WatsonxScoringModel;
-import io.quarkiverse.langchain4j.watsonx.WatsonxTokenGenerator;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.ChatModelConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.EmbeddingModelConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.GenerationModelConfig;
-import io.quarkiverse.langchain4j.watsonx.runtime.config.IAMConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxFixedRuntimeConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.ScoringModelConfig;
@@ -46,7 +43,6 @@ import io.smallrye.config.ConfigValidationException;
 @Recorder
 public class WatsonxRecorder {
 
-    private static final Map<String, WatsonxTokenGenerator> tokenGeneratorCache = new HashMap<>();
     private static final ConfigValidationException.Problem[] EMPTY_PROBLEMS = new ConfigValidationException.Problem[0];
     private static final TypeLiteral<Instance<ChatModelListener>> CHAT_MODEL_LISTENER_TYPE_LITERAL = new TypeLiteral<>() {
     };
@@ -60,16 +56,19 @@ public class WatsonxRecorder {
         var watsonxFixedRuntimeConfig = correspondingWatsonxFixedRuntimeConfig(fixedRuntimeConfig, configName);
 
         if (watsonxRuntimeConfig.enableIntegration()) {
+            var builder = chatBuilder(fixedRuntimeConfig, runtimeConfig, configName);
             var apiKey = firstOrDefault(
                     null,
                     watsonxFixedRuntimeConfig.apiKey(),
                     fixedRuntimeConfig.defaultConfig().apiKey());
-            var builder = chatBuilder(fixedRuntimeConfig, runtimeConfig, configName);
+            var iamBaseUrl = watsonxFixedRuntimeConfig.iam().baseUrl();
+            var granType = watsonxFixedRuntimeConfig.iam().grantType();
+            var duration = watsonxFixedRuntimeConfig.iam().timeout().orElse(Duration.ofSeconds(10));
             return new Function<>() {
                 @Override
                 public ChatLanguageModel apply(SyntheticCreationalContext<ChatLanguageModel> context) {
                     return builder
-                            .tokenGenerator(getOrCreateTokenGenerator(watsonxFixedRuntimeConfig.iam(), apiKey))
+                            .tokenGenerator(getOrCreateTokenGenerator(apiKey, iamBaseUrl, granType, duration))
                             .listeners(context.getInjectedReference(CHAT_MODEL_LISTENER_TYPE_LITERAL).stream().toList())
                             .build();
                 }
@@ -94,16 +93,19 @@ public class WatsonxRecorder {
         var watsonxFixedRuntimeConfig = correspondingWatsonxFixedRuntimeConfig(fixedRuntimeConfig, configName);
 
         if (watsonxRuntimeConfig.enableIntegration()) {
+            var builder = chatBuilder(fixedRuntimeConfig, runtimeConfig, configName);
             var apiKey = firstOrDefault(
                     null,
                     watsonxFixedRuntimeConfig.apiKey(),
                     fixedRuntimeConfig.defaultConfig().apiKey());
-            var builder = chatBuilder(fixedRuntimeConfig, runtimeConfig, configName);
+            var iamBaseUrl = watsonxFixedRuntimeConfig.iam().baseUrl();
+            var granType = watsonxFixedRuntimeConfig.iam().grantType();
+            var duration = watsonxFixedRuntimeConfig.iam().timeout().orElse(Duration.ofSeconds(10));
             return new Function<>() {
                 @Override
                 public StreamingChatLanguageModel apply(SyntheticCreationalContext<StreamingChatLanguageModel> context) {
                     return builder
-                            .tokenGenerator(getOrCreateTokenGenerator(watsonxFixedRuntimeConfig.iam(), apiKey))
+                            .tokenGenerator(getOrCreateTokenGenerator(apiKey, iamBaseUrl, granType, duration))
                             .listeners(context.getInjectedReference(CHAT_MODEL_LISTENER_TYPE_LITERAL).stream().toList())
                             .build();
                 }
@@ -128,16 +130,19 @@ public class WatsonxRecorder {
         var watsonxFixedRuntimeConfig = correspondingWatsonxFixedRuntimeConfig(fixedRuntimeConfig, configName);
 
         if (watsonxRuntimeConfig.enableIntegration()) {
+            var builder = generationBuilder(fixedRuntimeConfig, runtimeConfig, configName);
             var apiKey = firstOrDefault(
                     null,
                     watsonxFixedRuntimeConfig.apiKey(),
                     fixedRuntimeConfig.defaultConfig().apiKey());
-            var builder = generationBuilder(fixedRuntimeConfig, runtimeConfig, configName);
+            var iamBaseUrl = watsonxFixedRuntimeConfig.iam().baseUrl();
+            var granType = watsonxFixedRuntimeConfig.iam().grantType();
+            var duration = watsonxFixedRuntimeConfig.iam().timeout().orElse(Duration.ofSeconds(10));
             return new Function<>() {
                 @Override
                 public ChatLanguageModel apply(SyntheticCreationalContext<ChatLanguageModel> context) {
                     return builder
-                            .tokenGenerator(getOrCreateTokenGenerator(watsonxFixedRuntimeConfig.iam(), apiKey))
+                            .tokenGenerator(getOrCreateTokenGenerator(apiKey, iamBaseUrl, granType, duration))
                             .listeners(context.getInjectedReference(CHAT_MODEL_LISTENER_TYPE_LITERAL).stream().toList())
                             .build();
                 }
@@ -163,16 +168,19 @@ public class WatsonxRecorder {
         var watsonxFixedRuntimeConfig = correspondingWatsonxFixedRuntimeConfig(fixedRuntimeConfig, configName);
 
         if (watsonxRuntimeConfig.enableIntegration()) {
+            var builder = generationBuilder(fixedRuntimeConfig, runtimeConfig, configName);
             var apiKey = firstOrDefault(
                     null,
                     watsonxFixedRuntimeConfig.apiKey(),
                     fixedRuntimeConfig.defaultConfig().apiKey());
-            var builder = generationBuilder(fixedRuntimeConfig, runtimeConfig, configName);
+            var iamBaseUrl = watsonxFixedRuntimeConfig.iam().baseUrl();
+            var granType = watsonxFixedRuntimeConfig.iam().grantType();
+            var duration = watsonxFixedRuntimeConfig.iam().timeout().orElse(Duration.ofSeconds(10));
             return new Function<>() {
                 @Override
                 public StreamingChatLanguageModel apply(SyntheticCreationalContext<StreamingChatLanguageModel> context) {
                     return builder
-                            .tokenGenerator(getOrCreateTokenGenerator(watsonxFixedRuntimeConfig.iam(), apiKey))
+                            .tokenGenerator(getOrCreateTokenGenerator(apiKey, iamBaseUrl, granType, duration))
                             .listeners(context.getInjectedReference(CHAT_MODEL_LISTENER_TYPE_LITERAL).stream().toList())
                             .build();
                 }
@@ -204,10 +212,13 @@ public class WatsonxRecorder {
                 throw new ConfigValidationException(configProblems.toArray(EMPTY_PROBLEMS));
             }
 
-            String apiKey = firstOrDefault(
+            var apiKey = firstOrDefault(
                     null,
                     watsonxFixedRuntimeConfig.apiKey(),
                     fixedRuntimeConfig.defaultConfig().apiKey());
+            var iamBaseUrl = watsonxFixedRuntimeConfig.iam().baseUrl();
+            var granType = watsonxFixedRuntimeConfig.iam().grantType();
+            var duration = watsonxFixedRuntimeConfig.iam().timeout().orElse(Duration.ofSeconds(10));
 
             URL url;
             try {
@@ -237,7 +248,7 @@ public class WatsonxRecorder {
                 @Override
                 public WatsonxEmbeddingModel get() {
                     return builder
-                            .tokenGenerator(getOrCreateTokenGenerator(watsonxFixedRuntimeConfig.iam(), apiKey))
+                            .tokenGenerator(getOrCreateTokenGenerator(apiKey, iamBaseUrl, granType, duration))
                             .build();
                 }
             };
@@ -266,10 +277,13 @@ public class WatsonxRecorder {
             throw new ConfigValidationException(configProblems.toArray(EMPTY_PROBLEMS));
         }
 
-        String apiKey = firstOrDefault(
+        var apiKey = firstOrDefault(
                 null,
                 watsonxFixedRuntimeConfig.apiKey(),
                 fixedRuntimeConfig.defaultConfig().apiKey());
+        var iamBaseUrl = watsonxFixedRuntimeConfig.iam().baseUrl();
+        var granType = watsonxFixedRuntimeConfig.iam().grantType();
+        var duration = watsonxFixedRuntimeConfig.iam().timeout().orElse(Duration.ofSeconds(10));
 
         URL url;
         try {
@@ -299,7 +313,7 @@ public class WatsonxRecorder {
             @Override
             public WatsonxScoringModel get() {
                 return builder
-                        .tokenGenerator(getOrCreateTokenGenerator(watsonxFixedRuntimeConfig.iam(), apiKey))
+                        .tokenGenerator(getOrCreateTokenGenerator(apiKey, iamBaseUrl, granType, duration))
                         .build();
             }
         };
@@ -425,18 +439,6 @@ public class WatsonxRecorder {
                 .truncateInputTokens(generationModelConfig.truncateInputTokens().orElse(null))
                 .includeStopSequence(generationModelConfig.includeStopSequence().orElse(null))
                 .promptJoiner(promptJoiner);
-    }
-
-    private WatsonxTokenGenerator getOrCreateTokenGenerator(IAMConfig iamConfig, String apiKey) {
-        return tokenGeneratorCache.computeIfAbsent(apiKey,
-                new Function<String, WatsonxTokenGenerator>() {
-                    @Override
-                    public WatsonxTokenGenerator apply(String apiKey) {
-                        return new WatsonxTokenGenerator(iamConfig.baseUrl(),
-                                iamConfig.timeout().orElse(Duration.ofSeconds(10)),
-                                iamConfig.grantType(), apiKey);
-                    }
-                });
     }
 
     private LangChain4jWatsonxFixedRuntimeConfig.WatsonxConfig correspondingWatsonxFixedRuntimeConfig(
