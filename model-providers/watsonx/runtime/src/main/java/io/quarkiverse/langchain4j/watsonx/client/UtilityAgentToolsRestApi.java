@@ -1,0 +1,60 @@
+package io.quarkiverse.langchain4j.watsonx.client;
+
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response.Status;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import dev.langchain4j.Experimental;
+import io.quarkiverse.langchain4j.QuarkusJsonCodecFactory;
+import io.quarkiverse.langchain4j.watsonx.bean.UtilityAgentToolsRequest;
+import io.quarkiverse.langchain4j.watsonx.bean.UtilityAgentToolsResponse;
+import io.quarkiverse.langchain4j.watsonx.exception.BuiltinToolException;
+import io.quarkus.rest.client.reactive.ClientExceptionMapper;
+import io.quarkus.rest.client.reactive.jackson.ClientObjectMapper;
+
+@Experimental
+@Path("/v1-beta/utility_agent_tools")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
+public interface UtilityAgentToolsRestApi {
+
+    @POST
+    @Path("run")
+    public UtilityAgentToolsResponse run(UtilityAgentToolsRequest request);
+
+    @ClientObjectMapper
+    static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {
+        return QuarkusJsonCodecFactory.SnakeCaseObjectMapperHolder.MAPPER;
+    }
+
+    @ClientExceptionMapper
+    static BuiltinToolException toException(jakarta.ws.rs.core.Response response) {
+        MediaType mediaType = response.getMediaType();
+        if ((mediaType != null) && mediaType.isCompatible(MediaType.APPLICATION_JSON_TYPE)) {
+
+            // TODO:
+            // In the beta version, the web server does not return all possible exceptions.
+            // In the release version, review and update exception handling to ensure all cases are covered.
+
+            if (response.getStatus() == Status.UNAUTHORIZED.getStatusCode()) {
+                ObjectNode jsonObject = response.readEntity(ObjectNode.class);
+
+                try {
+
+                    String description = jsonObject.get("description").asText();
+                    return new BuiltinToolException(description, response.getStatus());
+
+                } catch (Exception e) {
+                    return new BuiltinToolException(response.readEntity(String.class), response.getStatus());
+                }
+            }
+        }
+        return new BuiltinToolException(response.readEntity(String.class), response.getStatus());
+    }
+}

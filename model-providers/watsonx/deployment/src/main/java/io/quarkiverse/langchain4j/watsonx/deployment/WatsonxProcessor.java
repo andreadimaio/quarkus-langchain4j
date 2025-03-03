@@ -6,20 +6,28 @@ import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.SCORING_
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.STREAMING_CHAT_MODEL;
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.TOKEN_COUNT_ESTIMATOR;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTarget.Kind;
 import org.jboss.jandex.ClassType;
+import org.jboss.jandex.DotName;
+import org.jboss.jandex.IndexView;
 import org.jboss.jandex.ParameterizedType;
 import org.jboss.jandex.Type;
 
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import io.quarkiverse.langchain4j.ModelName;
+import io.quarkiverse.langchain4j.ToolBox;
 import io.quarkiverse.langchain4j.deployment.DotNames;
+import io.quarkiverse.langchain4j.deployment.LangChain4jDotNames;
 import io.quarkiverse.langchain4j.deployment.items.ChatModelProviderCandidateBuildItem;
 import io.quarkiverse.langchain4j.deployment.items.EmbeddingModelProviderCandidateBuildItem;
 import io.quarkiverse.langchain4j.deployment.items.ScoringModelProviderCandidateBuildItem;
@@ -27,10 +35,13 @@ import io.quarkiverse.langchain4j.deployment.items.SelectedChatModelProviderBuil
 import io.quarkiverse.langchain4j.deployment.items.SelectedEmbeddingModelCandidateBuildItem;
 import io.quarkiverse.langchain4j.deployment.items.SelectedScoringModelProviderBuildItem;
 import io.quarkiverse.langchain4j.runtime.NamedConfigUtil;
+import io.quarkiverse.langchain4j.watsonx.deployment.items.BuiltinToolClassBuildItem;
+import io.quarkiverse.langchain4j.watsonx.runtime.BuiltinToolRecorder;
 import io.quarkiverse.langchain4j.watsonx.runtime.WatsonxRecorder;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxFixedRuntimeConfig;
 import io.quarkus.arc.SyntheticCreationalContext;
+import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.deployment.Capabilities;
 import io.quarkus.deployment.Capability;
@@ -38,6 +49,7 @@ import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.resteasy.reactive.spi.MessageBodyReaderOverrideBuildItem;
 import io.quarkus.resteasy.reactive.spi.MessageBodyWriterOverrideBuildItem;
@@ -69,6 +81,68 @@ public class WatsonxProcessor {
 
         if (config.scoringModel().enabled().isEmpty() || config.scoringModel().enabled().get()) {
             scoringProducer.produce(new ScoringModelProviderCandidateBuildItem(PROVIDER));
+        }
+    }
+
+    @BuildStep
+    void discoverBuiltinToolBeans(
+            CombinedIndexBuildItem indexBuildItem,
+            BeanDiscoveryFinishedBuildItem beans,
+            BuildProducer<BuiltinToolClassBuildItem> producer) {
+
+        Set<DotName> dotNames = new HashSet<>();
+        beans.getInjectionPoints().stream()
+                .map(ip -> ip.getRequiredType().name())
+                .filter(this::isABuiltinToolClass)
+                .forEach(dotNames::add);
+
+        IndexView indexView = indexBuildItem.getIndex();
+        indexView.getAnnotations(LangChain4jDotNames.REGISTER_AI_SERVICES).stream()
+                .filter(instance -> instance.target().kind().equals(Kind.CLASS))
+                .filter(instance -> instance.value("tools") != null)
+                .flatMap(instance -> Stream.of(instance.value("tools").asClassArray()))
+                .map(Type::name)
+                .filter(this::isABuiltinToolClass)
+                .forEach(dotNames::add);
+
+        indexView.getAnnotations(ToolBox.class).stream()
+                .filter(instance -> instance.value() != null)
+                .flatMap(instance -> Stream.of(instance.value().asClassArray()))
+                .map(Type::name)
+                .filter(this::isABuiltinToolClass)
+                .forEach(dotNames::add);
+
+        if (dotNames.isEmpty())
+            return; // Nothing to produce..
+
+        dotNames.stream().map(BuiltinToolClassBuildItem::new).forEach(producer::produce);
+    }
+
+    @BuildStep
+    @Record(ExecutionTime.RUNTIME_INIT)
+    void generateBuiltinToolBeans(
+            BuiltinToolRecorder recorder,
+            LangChain4jWatsonxConfig runtimeConfig,
+            List<BuiltinToolClassBuildItem> builtinToolClasses,
+            BuildProducer<SyntheticBeanBuildItem> beanProducer) {
+
+        for (BuiltinToolClassBuildItem builtinToolClass : builtinToolClasses) {
+            var builder = SyntheticBeanBuildItem
+                    .configure(builtinToolClass.getDotName())
+                    .setRuntimeInit()
+                    .defaultBean()
+                    .scope(ApplicationScoped.class);
+
+            if (builtinToolClass.getDotName().equals(WatsonxDotNames.GOOGLE_SEARCH_TOOL))
+                builder.supplier(recorder.googleSearchTool(runtimeConfig));
+            else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WEB_CRAWLER_TOOL))
+                builder.supplier(recorder.webCrawlerTool(runtimeConfig));
+            else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WEATHER_TOOL))
+                builder.supplier(recorder.weatherTool(runtimeConfig));
+            else
+                throw new RuntimeException("BuiltinToolClass not recognised");
+
+            beanProducer.produce(builder.done());
         }
     }
 
@@ -178,6 +252,17 @@ public class WatsonxProcessor {
         if (!NamedConfigUtil.isDefault(configName)) {
             builder.addQualifier(AnnotationInstance.builder(ModelName.class).add("value", configName).build());
         }
+    }
+
+    private boolean isABuiltinToolClass(DotName dotName) {
+        if (dotName.equals(WatsonxDotNames.WEB_CRAWLER_TOOL))
+            return true;
+        else if (dotName.equals(WatsonxDotNames.GOOGLE_SEARCH_TOOL))
+            return true;
+        else if (dotName.equals(WatsonxDotNames.WEATHER_TOOL))
+            return true;
+        else
+            return false;
     }
 
     /**
