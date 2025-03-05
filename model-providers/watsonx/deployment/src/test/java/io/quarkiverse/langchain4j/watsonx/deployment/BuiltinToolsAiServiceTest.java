@@ -1,5 +1,14 @@
 package io.quarkiverse.langchain4j.watsonx.deployment;
 
+import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.API_KEY;
+import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.BEARER_TOKEN;
+import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.DEFAULT_TIME_LIMIT;
+import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.PROJECT_ID;
+import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.RESPONSE_WATSONX_CHAT_API;
+import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_IAM_SERVER;
+import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WATSONX_CHAT_API;
+import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WATSONX_SERVER;
+import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WX_SERVER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Date;
@@ -35,18 +44,18 @@ public class BuiltinToolsAiServiceTest extends WireMockAbstract {
 
     @RegisterExtension
     static QuarkusUnitTest unitTest = new QuarkusUnitTest()
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.wx-base-url", WireMockUtil.URL_WX_SERVER)
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.base-url", WireMockUtil.URL_WATSONX_SERVER)
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.iam.base-url", WireMockUtil.URL_IAM_SERVER)
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.api-key", WireMockUtil.API_KEY)
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.project-id", WireMockUtil.PROJECT_ID)
-            .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class).addClasses(WireMockUtil.class));
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.wx-base-url", URL_WX_SERVER)
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.base-url", URL_WATSONX_SERVER)
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.iam.base-url", URL_IAM_SERVER)
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.api-key", API_KEY)
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.project-id", PROJECT_ID)
+            .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class).addClass(WireMockUtil.class));
 
     @Override
     void handlerBeforeEach() {
-        mockServers.mockIAMBuilder(200)
+        mockIAMBuilder(200)
                 .grantType(langchain4jWatsonConfig.defaultConfig().iam().grantType())
-                .response(WireMockUtil.BEARER_TOKEN, new Date())
+                .response(BEARER_TOKEN, new Date())
                 .build();
     }
 
@@ -101,9 +110,9 @@ public class BuiltinToolsAiServiceTest extends WireMockAbstract {
         List<TextChatParameterTool> tools = List.of(webCrawlerTool, googleSearchTool, weatherTool);
         List<TextChatMessage> messages = List.of(TextChatMessageUser.of("Hello"));
 
-        mockServers.mockWatsonxBuilder(WireMockUtil.URL_WATSONX_CHAT_API, 200)
+        mockWatsonxBuilder(URL_WATSONX_CHAT_API, 200)
                 .bodyIgnoreOrder(mapper.writeValueAsString(generateChatRequest(messages, tools)))
-                .response(WireMockUtil.RESPONSE_WATSONX_CHAT_API)
+                .response(RESPONSE_WATSONX_CHAT_API)
                 .build();
 
         assertEquals("AI Response", aiService.chat("Hello"));
@@ -124,7 +133,7 @@ public class BuiltinToolsAiServiceTest extends WireMockAbstract {
                 .presencePenalty(0.0)
                 .temperature(1.0)
                 .topP(1.0)
-                .timeLimit(WireMockUtil.DEFAULT_TIME_LIMIT)
+                .timeLimit(DEFAULT_TIME_LIMIT)
                 .build();
 
         return new TextChatRequest(modelId, spaceId, projectId, messages, tools, parameters);
