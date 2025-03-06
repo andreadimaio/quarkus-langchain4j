@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import io.quarkus.runtime.annotations.ConfigDocDefault;
 import io.quarkus.runtime.annotations.ConfigDocMapKey;
+import io.quarkus.runtime.annotations.ConfigDocSection;
 import io.quarkus.runtime.annotations.ConfigGroup;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
@@ -28,13 +29,14 @@ public interface LangChain4jWatsonxConfig {
     /**
      * Named model config.
      */
+    @ConfigDocSection
     @ConfigDocMapKey("model-name")
     @WithParentName
     @WithDefaults
     Map<String, WatsonConfig> namedConfig();
 
     /**
-     * Configuration for built-in tools available in Watsonx.ai.
+     * Configuration for built-in tools.
      */
     BuiltinToolConfig builtinTool();
 
@@ -110,6 +112,13 @@ public interface LangChain4jWatsonxConfig {
          * IAM authentication related settings.
          */
         IAMConfig iam();
+
+        /**
+         * Cloud Object Storage related settings.
+         * <p>
+         * This configuration is only required when using the {@code TextExtraction} class.
+         */
+        Optional<TextExtractionConfig> textExtraction();
 
         /**
          * Chat model related settings.
