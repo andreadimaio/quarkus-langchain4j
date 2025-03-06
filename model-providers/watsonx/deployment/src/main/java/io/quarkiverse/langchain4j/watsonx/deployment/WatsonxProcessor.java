@@ -5,11 +5,13 @@ import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.EMBEDDIN
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.SCORING_MODEL;
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.STREAMING_CHAT_MODEL;
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.TOKEN_COUNT_ESTIMATOR;
+import static io.quarkiverse.langchain4j.watsonx.deployment.WatsonxDotNames.TEXT_EXTRACTION;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -36,6 +38,7 @@ import io.quarkiverse.langchain4j.deployment.items.SelectedEmbeddingModelCandida
 import io.quarkiverse.langchain4j.deployment.items.SelectedScoringModelProviderBuildItem;
 import io.quarkiverse.langchain4j.runtime.NamedConfigUtil;
 import io.quarkiverse.langchain4j.watsonx.deployment.items.BuiltinToolClassBuildItem;
+import io.quarkiverse.langchain4j.watsonx.deployment.items.TextExtractionClassBuildItem;
 import io.quarkiverse.langchain4j.watsonx.runtime.BuiltinToolRecorder;
 import io.quarkiverse.langchain4j.watsonx.runtime.WatsonxRecorder;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
@@ -119,6 +122,33 @@ public class WatsonxProcessor {
     }
 
     @BuildStep
+    void discoverTextExtractionBeans(
+            CombinedIndexBuildItem indexBuildItem,
+            BeanDiscoveryFinishedBuildItem beans,
+            BuildProducer<TextExtractionClassBuildItem> producer) {
+
+        Set<String> qualifiers = beans.getInjectionPoints().stream()
+                .filter(injectionPoint -> injectionPoint.getRequiredType().name().equals(WatsonxDotNames.TEXT_EXTRACTION))
+                .map(injectionPoint -> {
+                    AnnotationInstance modelName = injectionPoint.getRequiredQualifier(LangChain4jDotNames.MODEL_NAME);
+                    if (modelName != null) {
+                        String value = modelName.value().asString();
+                        if ((value != null) && !value.isEmpty()) {
+                            return value;
+                        }
+                    }
+                    if (modelName == null && injectionPoint.isProgrammaticLookup()) {
+                        return null;
+                    }
+                    return NamedConfigUtil.DEFAULT_NAME;
+                }).collect(Collectors.toSet());
+
+        qualifiers.stream()
+                .map(TextExtractionClassBuildItem::new)
+                .forEach(producer::produce);
+    }
+
+    @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     void generateBuiltinToolBeans(
             BuiltinToolRecorder recorder,
@@ -153,7 +183,28 @@ public class WatsonxProcessor {
             List<SelectedChatModelProviderBuildItem> selectedChatItem,
             List<SelectedEmbeddingModelCandidateBuildItem> selectedEmbedding,
             List<SelectedScoringModelProviderBuildItem> selectedScoring,
+            List<TextExtractionClassBuildItem> selectedTextExtraction,
             BuildProducer<SyntheticBeanBuildItem> beanProducer) {
+
+        for (var selected : selectedTextExtraction) {
+
+            String configName = selected.getQualifier();
+
+            var textExtraction = selectedTextExtraction.stream()
+                    .filter(value -> value.getQualifier().equals(configName))
+                    .findFirst();
+
+            if (textExtraction.isPresent()) {
+                var textExtractionBuilder = SyntheticBeanBuildItem
+                        .configure(TEXT_EXTRACTION)
+                        .setRuntimeInit()
+                        .defaultBean()
+                        .scope(ApplicationScoped.class)
+                        .supplier(recorder.textExtraction(runtimeConfig, configName));
+                addQualifierIfNecessary(textExtractionBuilder, configName);
+                beanProducer.produce(textExtractionBuilder.done());
+            }
+        }
 
         for (var selected : selectedChatItem) {
 
@@ -267,8 +318,9 @@ public class WatsonxProcessor {
 
     /**
      * When both {@code rest-client-jackson} and {@code rest-client-jsonb} are present on the classpath we need to make sure
-     * that Jackson is used. This is not a proper solution as it affects all clients, but it's better than the having the
-     * reader/writers be selected at random.
+     * that Jackson is used. This is
+     * not a proper solution as it affects all clients, but it's better than the having the reader/writers be selected at
+     * random.
      */
     @BuildStep
     public void deprioritizeJsonb(Capabilities capabilities,
