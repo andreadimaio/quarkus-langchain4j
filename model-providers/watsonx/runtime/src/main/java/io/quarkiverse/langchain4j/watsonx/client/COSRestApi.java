@@ -1,6 +1,6 @@
 package io.quarkiverse.langchain4j.watsonx.client;
 
-import java.io.File;
+import java.io.InputStream;
 
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -21,7 +21,7 @@ public interface COSRestApi {
     @PUT
     @Path("{bucketName}/{fileName}")
     public Response createFile(@PathParam("bucketName") String bucketName,
-            @PathParam("fileName") String fileName, File file);
+            @PathParam("fileName") String fileName, InputStream ios);
 
     @GET
     @Path("{bucketName}/{fileName}")

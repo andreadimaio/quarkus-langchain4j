@@ -7,7 +7,11 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.List;
@@ -32,7 +36,8 @@ import io.quarkiverse.langchain4j.watsonx.client.WatsonxRestApi;
 import io.quarkiverse.langchain4j.watsonx.exception.TextExtractionException;
 
 /**
- * This class provides methods for extracting text from high-value business documents, making them more accessible to AI models
+ * This class provides methods for extracting text from high-value business
+ * documents, making them more accessible to AI models
  * or enabling the
  * identification of key information.
  * <p>
@@ -74,20 +79,25 @@ public class TextExtraction {
     final private String projectId, spaceId, version;
 
     /**
-     * Constructs a {@code TextExtraction} instance with the required parameters to perform text extraction from documents
+     * Constructs a {@code TextExtraction} instance with the required parameters to
+     * perform text extraction from documents
      * stored in IBM Cloud Object
-     * Storage (COS). This constructor initializes the necessary references, project details, and client instances for
+     * Storage (COS). This constructor initializes the necessary references, project
+     * details, and client instances for
      * interacting with IBM COS and
      * Watsonx AI services.
      * <p>
      * <strong>Default Bucket:</strong>
      * <p>
-     * The {@code documentReference.bucket} and {@code resultReference.bucket} fields are used as the default buckets for
+     * The {@code documentReference.bucket} and {@code resultReference.bucket}
+     * fields are used as the default buckets for
      * uploading documents to COS and
      * they will serve as the target location for the following:
      * <ul>
-     * <li>{@code documentReference.bucket}: The default bucket for uploading local documents to COS.</li>
-     * <li>{@code resultReference.bucket}: The default bucket for uploading extracted documents to COS.</li>
+     * <li>{@code documentReference.bucket}: The default bucket for uploading local
+     * documents to COS.</li>
+     * <li>{@code resultReference.bucket}: The default bucket for uploading
+     * extracted documents to COS.</li>
      * </ul>
      */
     public TextExtraction(
@@ -118,9 +128,11 @@ public class TextExtraction {
     }
 
     /**
-     * Starts the asynchronous text extraction process for a document stored in IBM Cloud Object Storage (COS). The extracted
+     * Starts the asynchronous text extraction process for a document stored in IBM
+     * Cloud Object Storage (COS). The extracted
      * text is saved as a new
-     * <b>Markdown</b> file in COS, preserving the original filename but using the {@code .md } extension. To customize the
+     * <b>Markdown</b> file in COS, preserving the original filename but using the
+     * {@code .md } extension. To customize the
      * output behavior, use the
      * method with the {@link Options} parameter.
      *
@@ -130,7 +142,8 @@ public class TextExtraction {
      * }
      * </pre>
      *
-     * <b>Note:</b> This method does not return the extracted value. Use {@code extractAndFetch} to extract the text
+     * <b>Note:</b> This method does not return the extracted value. Use
+     * {@code extractAndFetch} to extract the text
      * immediately.
      *
      * @param absolutePath The COS path of the document to extract text from.
@@ -143,13 +156,16 @@ public class TextExtraction {
     }
 
     /**
-     * Starts the asynchronous text extraction process for a document stored in IBM Cloud Object Storage (COS). The extracted
+     * Starts the asynchronous text extraction process for a document stored in IBM
+     * Cloud Object Storage (COS). The extracted
      * text is saved as a new
-     * <b>Markdown</b> file in COS, preserving the original filename but using the {@code .md} extension by default. Output
+     * <b>Markdown</b> file in COS, preserving the original filename but using the
+     * {@code .md} extension by default. Output
      * behavior can be customized
      * using the {@link Options} parameter.
      * <p>
-     * <b>Note:</b> This method does not return the extracted text. Use {@code extractAndFetch} to extract the text immediately.
+     * <b>Note:</b> This method does not return the extracted text. Use
+     * {@code extractAndFetch} to extract the text immediately.
      *
      * @param absolutePath The COS path of the document to extract text from.
      * @param options The configuration options for text extraction.
@@ -161,9 +177,11 @@ public class TextExtraction {
     }
 
     /**
-     * Uploads a local file to IBM Cloud Object Storage (COS) and starts the asynchronous text extraction process. The extracted
+     * Uploads a local file to IBM Cloud Object Storage (COS) and starts the
+     * asynchronous text extraction process. The extracted
      * text is saved as a new
-     * <b>Markdown</b> file in COS, preserving the original filename but using the {@code .md} extension by default. To
+     * <b>Markdown</b> file in COS, preserving the original filename but using the
+     * {@code .md} extension by default. To
      * customize the output behavior you
      * can use the {@link Options} parameter.
      *
@@ -174,7 +192,8 @@ public class TextExtraction {
      * }
      * </pre>
      *
-     * <b>Note:</b> This method does not return the extracted text. Use {@code extractAndFetch} to extract the text immediately.
+     * <b>Note:</b> This method does not return the extracted text. Use
+     * {@code extractAndFetch} to extract the text immediately.
      *
      * @param file The local file to be uploaded and processed.
      * @param languages Language codes to guide the text extraction process.
@@ -186,14 +205,17 @@ public class TextExtraction {
     }
 
     /**
-     * Uploads a local file to IBM Cloud Object Storage (COS) and starts the asynchronous text extraction process. The extracted
+     * Uploads a local file to IBM Cloud Object Storage (COS) and starts the
+     * asynchronous text extraction process. The extracted
      * text is saved as a new
-     * <b>Markdown</b> file in COS, preserving the original filename but using the {@code .md} extension by default. Output
+     * <b>Markdown</b> file in COS, preserving the original filename but using the
+     * {@code .md} extension by default. Output
      * behavior can be customized
      * using the {@link Options} parameter.
      *
      * <p>
-     * <b>Note:</b> This method does not return the extracted text. Use {@code extractAndFetch} to extract the text immediately.
+     * <b>Note:</b> This method does not return the extracted text. Use
+     * {@code extractAndFetch} to extract the text immediately.
      *
      * @param file The local file to be uploaded and processed.
      * @param options The configuration options for text extraction.
@@ -201,16 +223,78 @@ public class TextExtraction {
      */
     public String uploadAndStartExtraction(File file, Options options) throws TextExtractionException {
         requireNonNull(options);
-        upload(file, options, false);
+        try {
+            upload(new BufferedInputStream(new FileInputStream(file)), file.getName(), options, false);
+        } catch (FileNotFoundException e) {
+            throw new TextExtractionException("file_not_found", e.getMessage(), e);
+        }
         return startExtraction(file.getName(), options);
     }
 
     /**
-     * Starts the text extraction process for a file that is already present in Cloud Object Storage (COS) and returns the
+     * Uploads an InputStream to IBM Cloud Object Storage (COS) and starts the
+     * asynchronous text extraction process. The extracted
+     * text is saved as a new
+     * <b>Markdown</b> file in COS, preserving the original filename but using the
+     * {@code .md} extension by default. To
+     * customize the output behavior you
+     * can use the {@link Options} parameter.
+     *
+     * <pre>
+     * {@code
+     *
+     * String uploadAndStartExtraction(InputStream is, String fileName, Options options);
+     * }
+     * </pre>
+     *
+     * <b>Note:</b> This method does not return the extracted text. Use
+     * {@code extractAndFetch} to extract the text immediately.
+     *
+     * @param is The input stream of the file to be uploaded and processed.
+     * @param fileName The name of the file to be uploaded and processed.
+     * @param languages Language codes to guide the text extraction process.
+     * @return The unique identifier of the text extraction process.
+     */
+    public String uploadAndStartExtraction(InputStream is, String fileName, List<Language> languages)
+            throws TextExtractionException {
+        requireNonNull(languages);
+        return uploadAndStartExtraction(is, fileName, Options.create(languages));
+    }
+
+    /**
+     * Uploads an InputStream to IBM Cloud Object Storage (COS) and starts the
+     * asynchronous text extraction process. The extracted
+     * text is saved as a new
+     * <b>Markdown</b> file in COS, preserving the original filename but using the
+     * {@code .md} extension by default. Output
+     * behavior can be customized
+     * using the {@link Options} parameter.
+     *
+     * <p>
+     * <b>Note:</b> This method does not return the extracted text. Use
+     * {@code extractAndFetch} to extract the text immediately.
+     *
+     * @param is The input stream of the file to be uploaded and processed.
+     * @param fileName The name of the file to be uploaded and processed.
+     * @param options The configuration options for text extraction.
+     * @return The unique identifier of the text extraction process.
+     */
+    public String uploadAndStartExtraction(InputStream is, String fileName, Options options)
+            throws TextExtractionException {
+        requireNonNull(options);
+        upload(is, fileName, options, false);
+        return startExtraction(fileName, options);
+    }
+
+    /**
+     * Starts the text extraction process for a file that is already present in
+     * Cloud Object Storage (COS) and returns the
      * extracted text value. The
-     * extracted text is saved as a new <b>Markdown</b> file in COS, preserving the original filename but using the {@code .md}
+     * extracted text is saved as a new <b>Markdown</b> file in COS, preserving the
+     * original filename but using the {@code .md}
      * extension by default. To
-     * customize the output behavior, use the method with the {@link Options} parameter.
+     * customize the output behavior, use the method with the {@link Options}
+     * parameter.
      *
      * <pre>
      * {@code
@@ -229,16 +313,19 @@ public class TextExtraction {
     }
 
     /**
-     * Starts the text extraction process for a file that is already present in Cloud Object Storage (COS) and returns the
+     * Starts the text extraction process for a file that is already present in
+     * Cloud Object Storage (COS) and returns the
      * extracted text value. The
-     * extracted text is saved as a new <b>Markdown</b> file in COS, preserving the original filename but using the {@code .md}
+     * extracted text is saved as a new <b>Markdown</b> file in COS, preserving the
+     * original filename but using the {@code .md}
      * extension by default.
      * Output behavior can be customized using the {@link Options} parameter.
      *
      * <ul>
      * <li><b>Notes:</b>
      * <ul>
-     * <li>This method waits for the extraction process to complete and provides the extracted value.</li>
+     * <li>This method waits for the extraction process to complete and provides the
+     * extracted value.</li>
      * <li>The output behavior is configurable via {@link Options}.</li>
      * </ul>
      * </ul>
@@ -254,9 +341,11 @@ public class TextExtraction {
     }
 
     /**
-     * Uploads a local file to IBM Cloud Object Storage (COS), starts text extraction process and returns the extracted text
+     * Uploads a local file to IBM Cloud Object Storage (COS), starts text
+     * extraction process and returns the extracted text
      * value. The extracted text is
-     * saved as a new <b>Markdown</b> file in COS, preserving the original filename but using the {@code .md} extension by
+     * saved as a new <b>Markdown</b> file in COS, preserving the original filename
+     * but using the {@code .md} extension by
      * default. To customize the
      * output behavior, use the method with the {@link Options} parameter.
      *
@@ -270,7 +359,8 @@ public class TextExtraction {
      * <ul>
      * <li><b>Notes:</b>
      * <ul>
-     * <li>This method waits for the extraction process to complete and provides the extracted value.</li>
+     * <li>This method waits for the extraction process to complete and provides the
+     * extracted value.</li>
      * <li>The output behavior is configurable via {@link Options}.</li>
      * </ul>
      * </ul>
@@ -285,16 +375,19 @@ public class TextExtraction {
     }
 
     /**
-     * Uploads a local file to IBM Cloud Object Storage (COS) and starts the asynchronous text extraction process. The extracted
+     * Uploads a local file to IBM Cloud Object Storage (COS) and starts the
+     * asynchronous text extraction process. The extracted
      * text is saved as a new
-     * <b>Markdown</b> file in COS, preserving the original filename but using the {@code .md} extension by default. Output
+     * <b>Markdown</b> file in COS, preserving the original filename but using the
+     * {@code .md} extension by default. Output
      * behavior can be customized
      * using the {@link Options} parameter.
      *
      * <ul>
      * <li><b>Notes:</b>
      * <ul>
-     * <li>This method waits for the extraction process to complete and provides the extracted value.</li>
+     * <li>This method waits for the extraction process to complete and provides the
+     * extracted value.</li>
      * <li>The output behavior is configurable via {@link Options}.</li>
      * </ul>
      * </ul>
@@ -305,15 +398,86 @@ public class TextExtraction {
      */
     public String uploadExtractAndFetch(File file, Options options) throws TextExtractionException {
         requireNonNull(options);
-        upload(file, options, true);
+        try {
+            upload(new BufferedInputStream(new FileInputStream(file)), file.getName(), options, true);
+        } catch (FileNotFoundException e) {
+            throw new TextExtractionException("file_not_found", e.getMessage(), e);
+        }
         return extractAndFetch(file.getName(), options);
+    }
+
+    /**
+     * Uploads an InputStream to IBM Cloud Object Storage (COS), starts text
+     * extraction process and returns the extracted text
+     * value. The extracted text is
+     * saved as a new <b>Markdown</b> file in COS, preserving the original filename
+     * but using the {@code .md} extension by
+     * default. To customize the
+     * output behavior, use the method with the {@link Options} parameter.
+     *
+     * <pre>
+     * {@code
+     *
+     * String uploadExtractAndFetch(InputStream is, Options options);
+     * }
+     * </pre>
+     *
+     * <ul>
+     * <li><b>Notes:</b>
+     * <ul>
+     * <li>This method waits for the extraction process to complete and provides the
+     * extracted value.</li>
+     * <li>The output behavior is configurable via {@link Options}.</li>
+     * </ul>
+     * </ul>
+     *
+     * @param is The input stream of the file to be uploaded and processed.
+     * @param fileName The name of the file to be uploaded and processed.
+     * @param languages Language codes to guide the text extraction process.
+     * @return The text extracted.
+     */
+    public String uploadExtractAndFetch(InputStream is, String fileName, List<Language> languages)
+            throws TextExtractionException {
+        requireNonNull(languages);
+        return uploadExtractAndFetch(is, fileName, Options.create(languages));
+    }
+
+    /**
+     * Uploads an InputStream to IBM Cloud Object Storage (COS) and starts the
+     * asynchronous text extraction process. The extracted
+     * text is saved as a new
+     * <b>Markdown</b> file in COS, preserving the original filename but using the
+     * {@code .md} extension by default. Output
+     * behavior can be customized
+     * using the {@link Options} parameter.
+     *
+     * <ul>
+     * <li><b>Notes:</b>
+     * <ul>
+     * <li>This method waits for the extraction process to complete and provides the
+     * extracted value.</li>
+     * <li>The output behavior is configurable via {@link Options}.</li>
+     * </ul>
+     * </ul>
+     *
+     * @param is The input stream of the file to be uploaded and processed.
+     * @param fileName The name of the file to be uploaded and processed.
+     * @param options Configuration options, including cleanup behavior.
+     * @return The text extracted.
+     */
+    public String uploadExtractAndFetch(InputStream is, String fileName, Options options)
+            throws TextExtractionException {
+        requireNonNull(options);
+        upload(is, fileName, options, true);
+        return extractAndFetch(fileName, options);
     }
 
     /**
      * Retrieves the current status of a text extraction process.
      *
      * @param id The unique identifier of the extraction process.
-     * @return A {@link TextExtractionResponse} containing the status and details of the extraction job.
+     * @return A {@link TextExtractionResponse} containing the status and details of
+     *         the extraction job.
      */
     public TextExtractionResponse checkExtractionStatus(String id) throws TextExtractionException {
         return retryOn(new Callable<TextExtractionResponse>() {
@@ -325,14 +489,12 @@ public class TextExtraction {
     }
 
     //
-    // Upload a local file to the Cloud Object Storage.
+    // Upload a stream to the Cloud Object Storage.
     //
-    private void upload(File file, Options options, boolean waitForExtraction) {
-        requireNonNull(file);
-        if (!file.exists())
-            throw new IllegalArgumentException("The file %s doesn't exist".formatted(file.getAbsolutePath()));
-        if (file.isDirectory())
-            throw new IllegalArgumentException("The file can not be a directory");
+    private void upload(InputStream is, String fileName, Options options, boolean waitForExtraction) {
+        requireNonNull(is);
+        if (isNull(fileName) || fileName.isBlank())
+            throw new IllegalArgumentException("The file name can not be null or empty");
 
         boolean removeOutputFile = options.removeOutputFile.orElse(false);
         boolean removeUploadedFile = options.removeUploadedFile.orElse(false);
@@ -345,7 +507,7 @@ public class TextExtraction {
         retryOn(new Callable<Response>() {
             @Override
             public Response call() throws Exception {
-                return cosClient.createFile(documentReference.bucket, file.getName(), file);
+                return cosClient.createFile(documentReference.bucket, fileName, is);
             }
         });
     }
@@ -386,7 +548,8 @@ public class TextExtraction {
 
         var request = TextExtractionRequest.builder()
                 .documentReference(
-                        TextExtractionDataReference.of(documentReference.connection, absolutePath, documentReference.bucket))
+                        TextExtractionDataReference.of(documentReference.connection, absolutePath,
+                                documentReference.bucket))
                 .resultsReference(TextExtractionDataReference.of(resultsReference.connection, options.outputFileName,
                         resultsReference.bucket))
                 .steps(TextExtractionSteps.of(options.languages, options.tableProcessing))
@@ -538,7 +701,8 @@ public class TextExtraction {
 
         protected Options(Options options) {
             this(options.timeout, options.outputFileName, options.languages, options.type, options.tableProcessing,
-                    options.documentReference, options.resultsReference, options.removeUploadedFile, options.removeOutputFile);
+                    options.documentReference, options.resultsReference, options.removeUploadedFile,
+                    options.removeOutputFile);
         }
 
         public Options(List<Language> languages) {

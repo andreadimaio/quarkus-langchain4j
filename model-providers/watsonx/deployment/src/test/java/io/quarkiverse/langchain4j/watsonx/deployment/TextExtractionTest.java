@@ -29,8 +29,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.time.Duration;
@@ -152,6 +155,31 @@ public class TextExtractionTest extends WireMockAbstract {
     }
 
     @Test
+    void uploadExtractAndFetchInputStreamTest() throws Exception {
+
+        String fileName = "test.pdf";
+        InputStream inputStream = TextExtractionTest.class.getClassLoader().getResourceAsStream(FILE_NAME);
+        String outputFileName = fileName.replace(".pdf", ".md");
+
+        TextExtractionRequest body = createDefaultRequest();
+
+        mockServers(body, outputFileName, false, false);
+
+        String textExtracted = textExtraction.uploadExtractAndFetch(inputStream, fileName, List.of(ENGLISH));
+        assertEquals("Hello", textExtracted);
+
+        textExtracted = textExtraction.uploadExtractAndFetch(inputStream, fileName, Options.create(List.of(ENGLISH)));
+        assertEquals("Hello", textExtracted);
+
+        watsonxServer.verify(2, postRequestedFor(urlPathEqualTo("/ml/v1/text/extractions")));
+        watsonxServer.verify(2, getRequestedFor(urlPathEqualTo("/ml/v1/text/extractions/" + PROCESS_EXTRACTION_ID)));
+        cosServer.verify(2, putRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, FILE_NAME))));
+        cosServer.verify(2, getRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, outputFileName))));
+        cosServer.verify(0, deleteRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, FILE_NAME))));
+        cosServer.verify(0, deleteRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, outputFileName))));
+    }
+
+    @Test
     void uploadExtractAndFetchTest() throws Exception {
 
         File file = new File(TextExtractionTest.class.getClassLoader().getResource(FILE_NAME).toURI());
@@ -171,6 +199,28 @@ public class TextExtractionTest extends WireMockAbstract {
         watsonxServer.verify(2, getRequestedFor(urlPathEqualTo("/ml/v1/text/extractions/" + PROCESS_EXTRACTION_ID)));
         cosServer.verify(2, putRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, FILE_NAME))));
         cosServer.verify(2, getRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, outputFileName))));
+        cosServer.verify(0, deleteRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, FILE_NAME))));
+        cosServer.verify(0, deleteRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, outputFileName))));
+    }
+
+    @Test
+    void uploadExtractAndFetchFileNotFoundTest() throws Exception {
+        File file = new File("doesnotexist.pdf");
+        String outputFileName = file.getName().replace(".pdf", ".md");
+
+        TextExtractionRequest body = createDefaultRequest();
+
+        mockServers(body, outputFileName, false, false);
+
+        TextExtractionException ex = assertThrows(TextExtractionException.class,
+                () -> textExtraction.uploadExtractAndFetch(file, List.of(ENGLISH)));
+        assertEquals(ex.getCode(), "file_not_found");
+        assertTrue(ex.getCause() instanceof FileNotFoundException);
+
+        watsonxServer.verify(0, postRequestedFor(urlPathEqualTo("/ml/v1/text/extractions")));
+        watsonxServer.verify(0, getRequestedFor(urlPathEqualTo("/ml/v1/text/extractions/" + PROCESS_EXTRACTION_ID)));
+        cosServer.verify(0, putRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, FILE_NAME))));
+        cosServer.verify(0, getRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, outputFileName))));
         cosServer.verify(0, deleteRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, FILE_NAME))));
         cosServer.verify(0, deleteRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, outputFileName))));
     }
@@ -213,6 +263,54 @@ public class TextExtractionTest extends WireMockAbstract {
         assertEquals(PROCESS_EXTRACTION_ID, processId);
 
         processId = textExtraction.uploadAndStartExtraction(file, Options.create(List.of(ENGLISH)));
+        assertEquals(PROCESS_EXTRACTION_ID, processId);
+
+        watsonxServer.verify(2, postRequestedFor(urlPathEqualTo("/ml/v1/text/extractions")));
+        watsonxServer.verify(0, getRequestedFor(urlPathEqualTo("/ml/v1/text/extractions/" + PROCESS_EXTRACTION_ID)));
+        cosServer.verify(2, putRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, FILE_NAME))));
+        cosServer.verify(0, getRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, outputFileName))));
+        cosServer.verify(0, deleteRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, FILE_NAME))));
+        cosServer.verify(0, deleteRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, outputFileName))));
+    }
+
+    @Test
+    void uploadAndStartExtractionFileNotFoundTest() throws Exception {
+
+        File file = new File("doesnotexist.pdf");
+        String outputFileName = file.getName().replace(".pdf", ".md");
+
+        TextExtractionRequest body = createDefaultRequest();
+
+        mockServers(body, outputFileName, false, false);
+
+        TextExtractionException ex = assertThrows(TextExtractionException.class,
+                () -> textExtraction.uploadAndStartExtraction(file, List.of(ENGLISH)));
+        assertEquals(ex.getCode(), "file_not_found");
+        assertTrue(ex.getCause() instanceof FileNotFoundException);
+
+        watsonxServer.verify(0, postRequestedFor(urlPathEqualTo("/ml/v1/text/extractions")));
+        watsonxServer.verify(0, getRequestedFor(urlPathEqualTo("/ml/v1/text/extractions/" + PROCESS_EXTRACTION_ID)));
+        cosServer.verify(0, putRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, FILE_NAME))));
+        cosServer.verify(0, getRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, outputFileName))));
+        cosServer.verify(0, deleteRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, FILE_NAME))));
+        cosServer.verify(0, deleteRequestedFor(urlEqualTo("/%s/%s".formatted(BUCKET_NAME, outputFileName))));
+    }
+
+    @Test
+    void uploadAndStartExtractionInputStreamTest() throws Exception {
+
+        String fileName = "test.pdf";
+        InputStream inputStream = TextExtractionTest.class.getClassLoader().getResourceAsStream(FILE_NAME);
+        String outputFileName = fileName.replace(".pdf", ".md");
+
+        TextExtractionRequest body = createDefaultRequest();
+
+        mockServers(body, outputFileName, false, false);
+
+        String processId = textExtraction.uploadAndStartExtraction(inputStream, fileName, List.of(ENGLISH));
+        assertEquals(PROCESS_EXTRACTION_ID, processId);
+
+        processId = textExtraction.uploadAndStartExtraction(inputStream, fileName, Options.create(List.of(ENGLISH)));
         assertEquals(PROCESS_EXTRACTION_ID, processId);
 
         watsonxServer.verify(2, postRequestedFor(urlPathEqualTo("/ml/v1/text/extractions")));
@@ -599,8 +697,10 @@ public class TextExtractionTest extends WireMockAbstract {
                         """)
                 .build();
 
-        var ex = assertThrows(WatsonxException.class, () -> textExtraction.checkExtractionStatus(PROCESS_EXTRACTION_ID));
-        assertEquals(WatsonxError.Code.TEXT_EXTRACTION_EVENT_DOES_NOT_EXIST, ex.details().errors().get(0).codeToEnum().get());
+        var ex = assertThrows(WatsonxException.class,
+                () -> textExtraction.checkExtractionStatus(PROCESS_EXTRACTION_ID));
+        assertEquals(WatsonxError.Code.TEXT_EXTRACTION_EVENT_DOES_NOT_EXIST,
+                ex.details().errors().get(0).codeToEnum().get());
     }
 
     @Test
@@ -719,7 +819,8 @@ public class TextExtractionTest extends WireMockAbstract {
     private TextExtractionRequest createDefaultRequest() {
         return TextExtractionRequest.builder()
                 .documentReference(TextExtractionDataReference.of(CONNECTION_ID, FILE_NAME, BUCKET_NAME))
-                .resultsReference(TextExtractionDataReference.of(CONNECTION_ID, FILE_NAME.replace(".pdf", ".md"), BUCKET_NAME))
+                .resultsReference(
+                        TextExtractionDataReference.of(CONNECTION_ID, FILE_NAME.replace(".pdf", ".md"), BUCKET_NAME))
                 .steps(TextExtractionSteps.of(List.of("en"), true))
                 .type(ASSEMBLY_MD)
                 .projectId(PROJECT_ID)

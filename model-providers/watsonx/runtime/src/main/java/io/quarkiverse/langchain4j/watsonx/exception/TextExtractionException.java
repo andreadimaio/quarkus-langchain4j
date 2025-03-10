@@ -4,6 +4,11 @@ public class TextExtractionException extends Exception {
 
     final String code;
 
+    public TextExtractionException(String code, String message, Throwable cause) {
+        super(message, cause);
+        this.code = code;
+    }
+
     public TextExtractionException(String code, String message) {
         super(message);
         this.code = code;
