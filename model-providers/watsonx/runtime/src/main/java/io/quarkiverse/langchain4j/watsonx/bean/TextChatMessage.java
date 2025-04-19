@@ -6,6 +6,7 @@ import static java.util.Objects.isNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
@@ -273,6 +274,11 @@ public sealed interface TextChatMessage
 
         public TextChatToolCall build() {
             return new TextChatToolCall(index, id, type, new TextChatFunctionCall(name, arguments.toString()));
+        }
+
+        public TextChatToolCall buildAndGenerateId() {
+            return new TextChatToolCall(index, UUID.randomUUID().toString(), type,
+                    new TextChatFunctionCall(name, arguments.toString()));
         }
     }
 }

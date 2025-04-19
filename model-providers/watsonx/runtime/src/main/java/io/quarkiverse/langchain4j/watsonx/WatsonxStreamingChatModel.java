@@ -1,5 +1,7 @@
 package io.quarkiverse.langchain4j.watsonx;
 
+import static java.util.Objects.nonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -8,6 +10,8 @@ import java.util.function.Consumer;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.exception.UnsupportedFeatureException;
 import dev.langchain4j.model.chat.Capability;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
@@ -82,9 +86,36 @@ public class WatsonxStreamingChatModel extends Watsonx implements StreamingChatL
                 ? toolSpecifications.stream().map(TextChatParameterTool::of).toList()
                 : null;
 
-        TextChatRequest request = new TextChatRequest(modelId, spaceId, projectId, messages, tools,
-                TextChatParameters.convert(parameters));
+        TextChatParameters textChatParameters = TextChatParameters.convert(parameters);
         Context context = Context.empty();
+
+        if (nonNull(parameters.toolChoice()) && parameters.toolChoice().equals(ToolChoice.REQUIRED)) {
+            // This code is needed to avoid a infinite-loop when using the AiService
+            // in combination with the tool-choice option.
+            // If the tool-choice option is not removed after calling the tool,
+            // the model may continuously reselect the same tool in subsequent responses,
+            // even though the tool has already been invoked. This leads to an infinite loop
+            // where the assistant keeps generating tool calls without progressing the conversation.
+            // By explicitly removing the tool-choice field after the tool has been executed,
+            // we allow the assistant to resume normal message generation and provide a response
+            // based on the tool output instead of redundantly triggering it again.
+
+            // Watsonx doesn't return "tool_calls" when the tool-choice is set to REQUIRED.
+            context.put(FINISH_REASON_CONTEXT, "tool_calls");
+
+            if (messages.size() > 1) {
+                int LAST_MESSAGE = chatRequest.messages().size() - 1;
+                ChatMessage lastMessage = chatRequest.messages().get(LAST_MESSAGE);
+                if (lastMessage instanceof ToolExecutionResultMessage) {
+                    tools = null;
+                    textChatParameters.cleanToolChoice();
+                    context.delete(FINISH_REASON_CONTEXT);
+                }
+            }
+        }
+
+        TextChatRequest request = new TextChatRequest(modelId, spaceId, projectId, messages, tools, textChatParameters);
+
         context.put(TOOLS_CONTEXT, new ArrayList<StreamingToolFetcher>());
         context.put(COMPLETE_MESSAGE_CONTEXT, new StringBuilder());
 
@@ -113,7 +144,7 @@ public class WatsonxStreamingChatModel extends Watsonx implements StreamingChatL
                                         context.put(MODEL_ID_CONTEXT, chunk.modelId());
                                     }
 
-                                    if (message.finishReason() != null) {
+                                    if (message.finishReason() != null && !context.contains(FINISH_REASON_CONTEXT)) {
                                         context.put(FINISH_REASON_CONTEXT, message.finishReason());
                                     }
 
@@ -194,9 +225,22 @@ public class WatsonxStreamingChatModel extends Watsonx implements StreamingChatL
 
                                 if (finishReason.equals("tool_calls")) {
 
+                                    List<ToolExecutionRequest> toolExecutionRequests;
                                     List<StreamingToolFetcher> tools = context.get(TOOLS_CONTEXT);
-                                    List<ToolExecutionRequest> toolExecutionRequests = tools.stream()
-                                            .map(StreamingToolFetcher::build).map(TextChatToolCall::convert).toList();
+
+                                    // Watsonx doesn't return "id" if the tool-choice is set to REQUIRED.
+                                    // Remove this when the bug is fixed.
+                                    if (nonNull(parameters.toolChoice())
+                                            && parameters.toolChoice().equals(ToolChoice.REQUIRED)) {
+
+                                        toolExecutionRequests = tools.stream()
+                                                .map(StreamingToolFetcher::buildAndGenerateId).map(TextChatToolCall::convert)
+                                                .toList();
+
+                                    } else {
+                                        toolExecutionRequests = tools.stream()
+                                                .map(StreamingToolFetcher::build).map(TextChatToolCall::convert).toList();
+                                    }
 
                                     handler.onCompleteResponse(
                                             chatResponse.aiMessage(AiMessage.from(toolExecutionRequests)).build());
