@@ -5,12 +5,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.API_KEY;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.BEARER_TOKEN;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.PROJECT_ID;
-import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.RESPONSE_WATSONX_GENERATION_API;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_IAM_SERVER;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WATSONX_GENERATION_API;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WATSONX_SERVER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Date;
 
@@ -84,22 +82,6 @@ public class ResponseSchemaOffTest extends WireMockAbstract {
                 ]
             }
             """;
-
-    @Test
-    void test_poem_1() throws Exception {
-        var ex = assertThrows(RuntimeException.class,
-                () -> onMethodAIService.poem1("{response_schema} Generate a poem about {topic}", "dog"));
-        assertEquals(
-                "The {response_schema} placeholder cannot be used if the property quarkus.langchain4j.response-schema is set to false. Found in: io.quarkiverse.langchain4j.watsonx.deployment.ResponseSchemaOffTest$OnMethodAIService",
-                ex.getMessage());
-
-        mockWatsonxBuilder(URL_WATSONX_GENERATION_API, 200)
-                .body(matchingJsonPath("$.input", equalTo("Generate a poem about dog")))
-                .response(RESPONSE_WATSONX_GENERATION_API)
-                .build();
-
-        assertEquals("AI Response", onMethodAIService.poem1("Generate a poem about {topic}", "dog"));
-    }
 
     @Test
     void test_poem_2() {

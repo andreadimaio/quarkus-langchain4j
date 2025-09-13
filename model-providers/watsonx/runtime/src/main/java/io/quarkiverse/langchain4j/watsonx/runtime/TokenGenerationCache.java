@@ -1,27 +1,32 @@
 package io.quarkiverse.langchain4j.watsonx.runtime;
 
-import java.net.URL;
-import java.time.Duration;
+import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import com.ibm.watsonx.ai.core.auth.AuthenticationProvider;
+import com.ibm.watsonx.ai.core.auth.iam.IAMAuthenticator;
+
+// TODO: TO REMOVE
 public class TokenGenerationCache {
 
-    private static final Map<String, TokenGenerator> cache = new ConcurrentHashMap<>();
+    private static final Map<String, AuthenticationProvider> cache = new ConcurrentHashMap<>();
 
-    public static Optional<TokenGenerator> get(String apiKey) {
+    public static Optional<AuthenticationProvider> get(String apiKey) {
         return Optional.ofNullable(cache.get(apiKey));
     }
 
-    public static TokenGenerator getOrCreateTokenGenerator(String apiKey, URL iamBaseUrl, String grantType,
-            Duration timeout) {
+    public static AuthenticationProvider getOrCreateTokenGenerator(URI url, String apiKey) {
         return cache.computeIfAbsent(apiKey,
-                new Function<String, TokenGenerator>() {
+                new Function<String, AuthenticationProvider>() {
                     @Override
-                    public TokenGenerator apply(String apiKey) {
-                        return new TokenGenerator(iamBaseUrl, timeout, grantType, apiKey);
+                    public AuthenticationProvider apply(String apiKey) {
+                        return IAMAuthenticator.builder()
+                                .url(url)
+                                .apiKey(apiKey)
+                                .build();
                     }
                 });
     }

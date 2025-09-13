@@ -11,7 +11,7 @@ public interface TextExtractionConfig {
     /**
      * Base URL of the Cloud Object Storage API.
      */
-    String baseUrl();
+    String cosUrl();
 
     /**
      * The reference to the document that needs to be processed.

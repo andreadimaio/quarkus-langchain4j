@@ -2,6 +2,7 @@ package io.quarkiverse.langchain4j.watsonx.deployment;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
 import dev.langchain4j.model.chat.response.ChatResponse;
@@ -9,7 +10,7 @@ import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 
 public class WireMockUtil {
 
-    public static final Long DEFAULT_TIME_LIMIT = 10000l;
+    public static final Duration DEFAULT_TIME_LIMIT = Duration.ofSeconds(10);
 
     public static final int PORT_WATSONX_SERVER = 8089;
     public static final String URL_WATSONX_SERVER = "http://localhost:8089";
@@ -24,7 +25,7 @@ public class WireMockUtil {
     public static final String URL_WATSONX_TEXT_EXTRACTION_RESULT_API = "/ml/v1/text/extractions/%s?project_id=%s&version=%s";
 
     public static final int PORT_IAM_SERVER = 8090;
-    public static final String URL_IAM_SERVER = "http://localhost:8090";
+    public static final String URL_IAM_SERVER = "http://localhost:8090/identity/token";
     public static final String URL_IAM_GENERATE_TOKEN = "/identity/token";
 
     public static final int PORT_WX_SERVER = 8091;
@@ -50,21 +51,6 @@ public class WireMockUtil {
                 "expires_in": 3600,
                 "expiration": %d,
                 "scope": "ibm openid"
-            }
-            """;
-    public static String RESPONSE_WATSONX_GENERATION_API = """
-            {
-                "model_id": "mistralai/mistral-large",
-                "created_at": "2024-01-21T17:06:14.052Z",
-                "results": [
-                    {
-                        "generated_text": "AI Response",
-                        "generated_token_count": 5,
-                        "input_token_count": 50,
-                        "stop_reason": "eos_token",
-                        "seed": 2123876088
-                    }
-                ]
             }
             """;
     public static String RESPONSE_WATSONX_CHAT_API = """
@@ -151,39 +137,6 @@ public class WireMockUtil {
             id: 4
             event: message
             data: {"id":"chat-049e3ff7ff08416fb5c334d05af059da","model_id":"mistralai/mistral-large","choices":[],"created":1728810714,"model_version":"2.0.0","created_at":"2024-10-13T09:11:55.715Z","usage":{"completion_tokens":36,"prompt_tokens":88,"total_tokens":124}}
-
-            id: 5
-            event: close
-            data: {}
-            """;
-    public static String RESPONSE_WATSONX_GENERATION_STREAMING_API = """
-            id: 1
-            event: message
-            data: {}
-
-            id: 2
-            event: message
-            data: {"modelId":"mistralai/mistral-large","model_version":"2.1.0","created_at":"2024-05-04T14:29:19.162Z","results":[{"generated_text":"","generated_token_count":0,"input_token_count":2,"stop_reason":"not_finished"}]}
-
-            id: 3
-            event: message
-            data: {"model_id":"mistralai/mistral-large","model_version":"2.1.0","created_at":"2024-05-04T14:29:19.203Z","results":[{"generated_text":". ","generated_token_count":2,"input_token_count":0,"stop_reason":"not_finished"}]}
-
-            id: 4
-            event: message
-            data: {"model_id":"mistralai/mistral-large","model_version":"2.1.0","created_at":"2024-05-04T14:29:19.223Z","results":[{"generated_text":"I'","generated_token_count":3,"input_token_count":0,"stop_reason":"not_finished"}]}
-
-            id: 5
-            event: message
-            data: {"model_id":"mistralai/mistral-large","model_version":"2.1.0","created_at":"2024-05-04T14:29:19.243Z","results":[{"generated_text":"m ","generated_token_count":4,"input_token_count":0,"stop_reason":"not_finished"}]}
-
-            id: 6
-            event: message
-            data: {"model_id":"mistralai/mistral-large","model_version":"2.1.0","created_at":"2024-05-04T14:29:19.262Z","results":[{"generated_text":"a beginner","generated_token_count":5,"input_token_count":0,"stop_reason":"max_tokens"}]}
-
-            id: 7
-            event: close
-            data: {}
             """;
     public static final String RESPONSE_WATSONX_TOKENIZER_API = """
               {
@@ -213,7 +166,7 @@ public class WireMockUtil {
 
             id: 2
             event: message
-            data: {"id":"chat-188595e69470446fb1740c98acfdfe12","model_id":"mistralai/mistral-large","choices":[{"index":0,"finish_reason":null,"delta":{"tool_calls":[{"index":0,"id":"chatcmpl-tool-7cf5dfd7c52441e59a7585243b22a86a","type":"function","function":{"name":"","arguments":""}}]}}],"created":1728811250,"model_version":"2.0.0","created_at":"2024-10-13T09:20:50.546Z","usage":{"completion_tokens":4,"prompt_tokens":84,"total_tokens":88}}
+            data: {"id":"chat-188595e69470446fb1740c98acfdfe12","model_id":"mistralai/mistral-large","choices":[{"index":0,"finish_reason":null,"delta":{"tool_calls":[{"index":0,"id":"chatcmpl-tool-7cf5dfd7c52441e59a7585243b22a86a","type":"function","function":{"name":"sum","arguments":""}}]}}],"created":1728811250,"model_version":"2.0.0","created_at":"2024-10-13T09:20:50.546Z","usage":{"completion_tokens":4,"prompt_tokens":84,"total_tokens":88}}
 
             id: 3
             event: message
@@ -262,9 +215,6 @@ public class WireMockUtil {
             id: 14
             event: message
             data: {"id":"chat-188595e69470446fb1740c98acfdfe12","model_id":"mistralai/mistral-large","choices":[],"created":1728811250,"model_version":"2.0.0","created_at":"2024-10-13T09:20:50.935Z","usage":{"completion_tokens":25,"prompt_tokens":84,"total_tokens":109}}
-
-            id: 15
-            event: close
             """;
 
     public static StreamingChatResponseHandler streamingChatResponseHandler(AtomicReference<ChatResponse> streamingResponse) {

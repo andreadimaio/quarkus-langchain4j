@@ -1,29 +1,21 @@
 package io.quarkiverse.langchain4j.watsonx.runtime;
 
 import static io.quarkiverse.langchain4j.runtime.OptionalUtil.firstOrDefault;
-import static io.quarkiverse.langchain4j.watsonx.runtime.TokenGenerationCache.getOrCreateTokenGenerator;
 import static java.util.Objects.isNull;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import org.jboss.resteasy.reactive.client.api.LoggingScope;
+import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool;
+import com.ibm.watsonx.ai.tool.builtin.WeatherTool;
+import com.ibm.watsonx.ai.tool.builtin.WebCrawlerTool;
 
-import io.quarkiverse.langchain4j.watsonx.client.UtilityAgentToolsRestApi;
-import io.quarkiverse.langchain4j.watsonx.client.WatsonxClientLogger;
-import io.quarkiverse.langchain4j.watsonx.client.filter.BearerTokenHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.BuiltinServiceConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.IAMConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
-import io.quarkiverse.langchain4j.watsonx.services.GoogleSearchService;
-import io.quarkiverse.langchain4j.watsonx.services.WeatherService;
-import io.quarkiverse.langchain4j.watsonx.services.WebCrawlerService;
-import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
 import io.smallrye.config.ConfigValidationException;
@@ -41,7 +33,7 @@ public class BuiltinServiceRecorder {
         this.runtimeConfig = runtimeConfig;
     }
 
-    public Supplier<WebCrawlerService> webCrawler() {
+    public Supplier<WebCrawlerTool> webCrawler() {
 
         IAMConfig iamConfig = runtimeConfig.getValue().defaultConfig().iam();
         BuiltinServiceConfig builtinToolConfig = runtimeConfig.getValue().builtInService();
@@ -62,9 +54,9 @@ public class BuiltinServiceRecorder {
             throw new ConfigValidationException(configProblems.toArray(EMPTY_PROBLEMS));
         }
 
-        Duration timeout = firstOrDefault(Duration.ofSeconds(10),
-                builtinToolConfig.timeout(),
-                runtimeConfig.getValue().defaultConfig().timeout());
+        Duration timeout = firstOrDefault(
+                runtimeConfig.getValue().defaultConfig().timeout().orElse(Duration.ofSeconds(10)),
+                builtinToolConfig.timeout());
 
         boolean logRequests = firstOrDefault(
                 runtimeConfig.getValue().defaultConfig().logRequests().orElse(false),
@@ -74,16 +66,15 @@ public class BuiltinServiceRecorder {
                 runtimeConfig.getValue().defaultConfig().logResponses().orElse(false),
                 builtinToolConfig.logResponses());
 
-        return new Supplier<WebCrawlerService>() {
+        return new Supplier<WebCrawlerTool>() {
             @Override
-            public WebCrawlerService get() {
-                return new WebCrawlerService(
-                        createRestClient(baseUrl, apiKey, iamConfig, timeout, logRequests, logResponses));
+            public WebCrawlerTool get() {
+                return new WebCrawlerTool(null);
             }
         };
     }
 
-    public Supplier<GoogleSearchService> googleSearch() {
+    public Supplier<GoogleSearchTool> googleSearch() {
 
         IAMConfig iamConfig = runtimeConfig.getValue().defaultConfig().iam();
         BuiltinServiceConfig builtinToolConfig = runtimeConfig.getValue().builtInService();
@@ -104,9 +95,9 @@ public class BuiltinServiceRecorder {
             throw new ConfigValidationException(configProblems.toArray(EMPTY_PROBLEMS));
         }
 
-        Duration timeout = firstOrDefault(Duration.ofSeconds(10),
-                builtinToolConfig.timeout(),
-                runtimeConfig.getValue().defaultConfig().timeout());
+        Duration timeout = firstOrDefault(
+                runtimeConfig.getValue().defaultConfig().timeout().orElse(Duration.ofSeconds(10)),
+                builtinToolConfig.timeout());
 
         boolean logRequests = firstOrDefault(
                 runtimeConfig.getValue().defaultConfig().logRequests().orElse(false),
@@ -116,17 +107,15 @@ public class BuiltinServiceRecorder {
                 runtimeConfig.getValue().defaultConfig().logResponses().orElse(false),
                 builtinToolConfig.logResponses());
 
-        return new Supplier<GoogleSearchService>() {
+        return new Supplier<GoogleSearchTool>() {
             @Override
-            public GoogleSearchService get() {
-                return new GoogleSearchService(
-                        createRestClient(baseUrl, apiKey, iamConfig, timeout, logRequests, logResponses),
-                        builtinToolConfig.googleSearch());
+            public GoogleSearchTool get() {
+                return new GoogleSearchTool(null);
             }
         };
     }
 
-    public Supplier<WeatherService> weather() {
+    public Supplier<WeatherTool> weather() {
 
         IAMConfig iamConfig = runtimeConfig.getValue().defaultConfig().iam();
         BuiltinServiceConfig builtinToolConfig = runtimeConfig.getValue().builtInService();
@@ -147,9 +136,9 @@ public class BuiltinServiceRecorder {
             throw new ConfigValidationException(configProblems.toArray(EMPTY_PROBLEMS));
         }
 
-        Duration timeout = firstOrDefault(Duration.ofSeconds(10),
-                builtinToolConfig.timeout(),
-                runtimeConfig.getValue().defaultConfig().timeout());
+        Duration timeout = firstOrDefault(
+                runtimeConfig.getValue().defaultConfig().timeout().orElse(Duration.ofSeconds(10)),
+                builtinToolConfig.timeout());
 
         boolean logRequests = firstOrDefault(
                 runtimeConfig.getValue().defaultConfig().logRequests().orElse(false),
@@ -159,35 +148,12 @@ public class BuiltinServiceRecorder {
                 runtimeConfig.getValue().defaultConfig().logResponses().orElse(false),
                 builtinToolConfig.logResponses());
 
-        return new Supplier<WeatherService>() {
+        return new Supplier<WeatherTool>() {
             @Override
-            public WeatherService get() {
-                return new WeatherService(
-                        createRestClient(baseUrl, apiKey, iamConfig, timeout, logRequests, logResponses));
+            public WeatherTool get() {
+                return new WeatherTool(null);
             }
         };
-    }
-
-    private UtilityAgentToolsRestApi createRestClient(
-            String baseUrl, String apiKey, IAMConfig iamConfig,
-            Duration timeout, boolean logRequests, boolean logResponses) {
-        var builder = QuarkusRestClientBuilder.newBuilder()
-                .baseUri(URI.create(baseUrl))
-                .clientHeadersFactory(
-                        new BearerTokenHeaderFactory(getOrCreateTokenGenerator(
-                                apiKey,
-                                iamConfig.baseUrl(),
-                                iamConfig.grantType(),
-                                iamConfig.timeout().orElse(Duration.ofSeconds(10)))))
-                .readTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
-                .connectTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS);
-
-        if (logRequests || logResponses) {
-            builder.loggingScope(LoggingScope.REQUEST_RESPONSE)
-                    .clientLogger(new WatsonxClientLogger(logRequests, logResponses));
-        }
-
-        return builder.build(UtilityAgentToolsRestApi.class);
     }
 
     private String getWxBaseUrl(Optional<String> baseUrl) {

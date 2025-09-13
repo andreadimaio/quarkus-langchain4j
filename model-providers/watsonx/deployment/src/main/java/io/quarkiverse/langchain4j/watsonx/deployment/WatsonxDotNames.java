@@ -2,14 +2,14 @@ package io.quarkiverse.langchain4j.watsonx.deployment;
 
 import org.jboss.jandex.DotName;
 
-import io.quarkiverse.langchain4j.watsonx.runtime.TextExtraction;
-import io.quarkiverse.langchain4j.watsonx.services.GoogleSearchService;
-import io.quarkiverse.langchain4j.watsonx.services.WeatherService;
-import io.quarkiverse.langchain4j.watsonx.services.WebCrawlerService;
+import com.ibm.watsonx.ai.textextraction.TextExtractionService;
+import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool;
+import com.ibm.watsonx.ai.tool.builtin.WeatherTool;
+import com.ibm.watsonx.ai.tool.builtin.WebCrawlerTool;
 
 public class WatsonxDotNames {
-    public static final DotName WEB_CRAWLER_SERVICE = DotName.createSimple(WebCrawlerService.class);
-    public static final DotName GOOGLE_SEARCH_SERVICE = DotName.createSimple(GoogleSearchService.class);
-    public static final DotName WEATHER_SERVICE = DotName.createSimple(WeatherService.class);
-    public static final DotName TEXT_EXTRACTION = DotName.createSimple(TextExtraction.class);
+    public static final DotName WEB_CRAWLER_SERVICE = DotName.createSimple(WebCrawlerTool.class);
+    public static final DotName GOOGLE_SEARCH_SERVICE = DotName.createSimple(GoogleSearchTool.class);
+    public static final DotName WEATHER_SERVICE = DotName.createSimple(WeatherTool.class);
+    public static final DotName TEXT_EXTRACTION = DotName.createSimple(TextExtractionService.class);
 }

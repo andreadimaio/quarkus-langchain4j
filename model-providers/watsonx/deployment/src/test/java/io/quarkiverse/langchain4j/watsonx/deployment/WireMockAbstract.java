@@ -34,7 +34,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
@@ -42,8 +41,7 @@ import com.github.tomakehurst.wiremock.http.RequestMethod;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 
-import io.quarkiverse.langchain4j.watsonx.bean.TextExtractionRequest;
-import io.quarkiverse.langchain4j.watsonx.client.WatsonxRestApi;
+import io.quarkiverse.langchain4j.QuarkusJsonCodecFactory.SnakeCaseObjectMapperHolder;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
 
 public abstract class WireMockAbstract {
@@ -59,7 +57,7 @@ public abstract class WireMockAbstract {
 
     @BeforeAll
     static void beforeAll() {
-        mapper = WatsonxRestApi.objectMapper(new ObjectMapper());
+        mapper = SnakeCaseObjectMapperHolder.MAPPER;
 
         watsonxServer = new WireMockServer(options().port(PORT_WATSONX_SERVER));
         watsonxServer.start();
@@ -148,13 +146,6 @@ public abstract class WireMockAbstract {
      */
     public CosBuilder mockCosBuilder(RequestMethod method, String bucketName, String fileName, int status) {
         return new CosBuilder(method, "/%s/%s".formatted(bucketName, fileName), status, "");
-    }
-
-    /**
-     * Builder to mock the Watsonx.ai server for the text extraction api.
-     */
-    public TextExtractionBuilder mockTextExtractionBuilder(RequestMethod method, String url, int status) {
-        return new TextExtractionBuilder(method, url, status);
     }
 
     public static abstract class ServerBuilder {
@@ -355,130 +346,5 @@ public abstract class WireMockAbstract {
                                     .withHeader("Content-Type", super.responseMediaType)
                                     .withBody(super.response)));
         }
-    }
-
-    public static class TextExtractionBuilder extends ServerBuilder {
-
-        protected TextExtractionBuilder(RequestMethod method, String apiURL, int status) {
-            super(method, apiURL, status, VERSION);
-        }
-
-        public TextExtractionBuilder body(TextExtractionRequest request) {
-            try {
-                super.body(mapper.writeValueAsString(request));
-                return this;
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        public TextExtractionBuilder failResponse(TextExtractionRequest request, String id) {
-            super.response("""
-                    {
-                          "metadata": {
-                            "id": "%s",
-                            "created_at": "2023-05-02T16:27:51Z",
-                            "project_id": "%s",
-                            "name": "extract"
-                          },
-                          "entity": {
-                            "document_reference": {
-                              "type": "connection_asset",
-                              "connection": {
-                                "id": "%s"
-                              },
-                              "location": {
-                                "file_name": "%s"
-                              }
-                            },
-                            "results_reference": {
-                              "type": "connection_asset",
-                              "connection": {
-                                "id": "%s"
-                              },
-                              "location": {
-                                "file_name": "%s"
-                              }
-                            },
-                            "results": {
-                                "error": {
-                                    "code": "file_download_error",
-                                    "message": "error message"
-                                },
-                                "number_pages_processed": 0,
-                                "status": "failed"
-                            }
-                          }
-                        }""".formatted(
-                    id,
-                    request.projectId(),
-                    request.documentReference().connection().id(),
-                    request.documentReference().location().fileName(),
-                    request.resultsReference().connection().id(),
-                    request.resultsReference().location().fileName()));
-            return this;
-        }
-
-        public TextExtractionBuilder response(TextExtractionRequest request, String id, String status) {
-            super.response("""
-                    {
-                      "metadata": {
-                        "id": "%s",
-                        "created_at": "2023-05-02T16:27:51Z",
-                        "project_id": "%s",
-                        "name": "extract"
-                      },
-                      "entity": {
-                        "document_reference": {
-                          "type": "connection_asset",
-                          "connection": {
-                            "id": "%s"
-                          },
-                          "location": {
-                            "file_name": "%s",
-                            "bucket": "%s"
-                          }
-                        },
-                        "results_reference": {
-                          "type": "connection_asset",
-                          "connection": {
-                            "id": "%s"
-                          },
-                          "location": {
-                            "file_name": "%s",
-                            "bucket": "%s"
-                          }
-                        },
-                        "results": {
-                          "status": "%s",
-                          "number_pages_processed": 1,
-                          "running_at": "2023-05-02T16:28:03Z",
-                          "completed_at": "2023-05-02T16:28:03Z"
-                        }
-                      }
-                    }""".formatted(
-                    id,
-                    request.projectId(),
-                    request.documentReference().connection().id(),
-                    request.documentReference().location().fileName(),
-                    request.documentReference().location().bucket(),
-                    request.resultsReference().connection().id(),
-                    request.resultsReference().location().fileName(),
-                    request.resultsReference().location().bucket(),
-                    status));
-            return this;
-        }
-
-        @Override
-        public StubMapping build() {
-            return watsonxServer.stubFor(
-                    super.builder
-                            .withHeader("Authorization", equalTo("Bearer %s".formatted(super.token)))
-                            .willReturn(aResponse()
-                                    .withStatus(super.status)
-                                    .withHeader("Content-Type", super.responseMediaType)
-                                    .withBody(super.response)));
-        }
-
     }
 }
