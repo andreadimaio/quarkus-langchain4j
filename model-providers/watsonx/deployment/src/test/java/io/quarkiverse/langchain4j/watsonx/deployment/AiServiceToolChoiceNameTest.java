@@ -24,25 +24,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
+import com.ibm.watsonx.ai.chat.model.AssistantMessage;
+import com.ibm.watsonx.ai.chat.model.ChatMessage;
+import com.ibm.watsonx.ai.chat.model.ChatParameters;
+import com.ibm.watsonx.ai.chat.model.ChatParameters.ToolChoice;
+import com.ibm.watsonx.ai.chat.model.JsonSchema;
+import com.ibm.watsonx.ai.chat.model.TextChatRequest;
+import com.ibm.watsonx.ai.chat.model.Tool;
+import com.ibm.watsonx.ai.chat.model.ToolCall;
+import com.ibm.watsonx.ai.chat.model.ToolMessage;
 
-import dev.langchain4j.agent.tool.Tool;
-import dev.langchain4j.agent.tool.ToolExecutionRequest;
-import dev.langchain4j.agent.tool.ToolSpecification;
-import dev.langchain4j.data.message.ToolExecutionResultMessage;
-import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import io.quarkiverse.langchain4j.RegisterAiService;
-import io.quarkiverse.langchain4j.watsonx.bean.TextChatMessage;
-import io.quarkiverse.langchain4j.watsonx.bean.TextChatMessage.TextChatMessageAssistant;
-import io.quarkiverse.langchain4j.watsonx.bean.TextChatMessage.TextChatMessageSystem;
-import io.quarkiverse.langchain4j.watsonx.bean.TextChatMessage.TextChatMessageTool;
-import io.quarkiverse.langchain4j.watsonx.bean.TextChatMessage.TextChatMessageUser;
-import io.quarkiverse.langchain4j.watsonx.bean.TextChatMessage.TextChatParameterTool;
-import io.quarkiverse.langchain4j.watsonx.bean.TextChatMessage.TextChatToolCall;
-import io.quarkiverse.langchain4j.watsonx.bean.TextChatParameters;
-import io.quarkiverse.langchain4j.watsonx.bean.TextChatRequest;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.ChatModelConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
 import io.quarkus.test.QuarkusUnitTest;
@@ -69,21 +64,19 @@ public class AiServiceToolChoiceNameTest extends WireMockAbstract {
                 .build();
     }
 
-    static ToolSpecification tool = ToolSpecification.builder()
-            .description("Execute the sum of two numbers")
-            .name("sum")
-            .parameters(
-                    JsonObjectSchema.builder()
-                            .addIntegerProperty("first")
-                            .addIntegerProperty("second")
-                            .required("first", "second")
-                            .build())
-            .build();
+    static Tool tool = com.ibm.watsonx.ai.chat.model.Tool.of(
+            "sum",
+            "Execute the sum of two numbers",
+            JsonSchema.builder()
+                    .addIntegerProperty("first")
+                    .addIntegerProperty("second")
+                    .required("first", "second")
+                    .build());
 
     @Singleton
     @RegisterAiService(tools = Calculator.class)
     @SystemMessage("This is a systemMessage")
-    interface AIService {
+    static interface AIService {
         String chat(@MemoryId String memoryId, @UserMessage String text);
 
         Multi<String> chatMulti(@MemoryId String memoryId, @UserMessage String text);
@@ -91,7 +84,7 @@ public class AiServiceToolChoiceNameTest extends WireMockAbstract {
 
     @Singleton
     static class Calculator {
-        @Tool("Execute the sum of two numbers")
+        @dev.langchain4j.agent.tool.Tool("Execute the sum of two numbers")
         @Blocking
         public int sum(int first, int second) {
             return first + second;
@@ -104,17 +97,16 @@ public class AiServiceToolChoiceNameTest extends WireMockAbstract {
     @Test
     void chat() throws Exception {
 
-        var toolExecutionRequest = ToolExecutionRequest.builder()
-                .name("sum")
-                .id("chatcmpl-tool-3f621ce6ad9240da963d661215621711")
-                .arguments("{\"first\":1, \"second\":1}")
-                .build();
+        var toolCall = ToolCall.of(
+                "chatcmpl-tool-3f621ce6ad9240da963d661215621711",
+                "sum",
+                "{\"first\":1, \"second\":1}");
 
-        var firstCallChatMessages = List.<TextChatMessage> of(
-                TextChatMessageSystem.of("This is a systemMessage"),
-                TextChatMessageUser.of("Execute the sum of 1 + 1"));
+        var firstCallChatMessages = List.<ChatMessage> of(
+                com.ibm.watsonx.ai.chat.model.SystemMessage.of("This is a systemMessage"),
+                com.ibm.watsonx.ai.chat.model.UserMessage.text("Execute the sum of 1 + 1"));
 
-        var firstCallParameters = generateChatRequest(firstCallChatMessages, List.of(TextChatParameterTool.of(tool)), true);
+        var firstCallParameters = generateChatRequest(firstCallChatMessages, List.of(tool), true);
 
         mockWatsonxBuilder(URL_WATSONX_CHAT_API, 200)
                 .body(mapper.writeValueAsString(firstCallParameters))
@@ -151,15 +143,13 @@ public class AiServiceToolChoiceNameTest extends WireMockAbstract {
                         }""")
                 .build();
 
-        var toolExecutionResultMessage = ToolExecutionResultMessage.from(toolExecutionRequest, "2");
+        var secondCallChatMessages = List.<ChatMessage> of(
+                com.ibm.watsonx.ai.chat.model.SystemMessage.of("This is a systemMessage"),
+                com.ibm.watsonx.ai.chat.model.UserMessage.text("Execute the sum of 1 + 1"),
+                AssistantMessage.of(toolCall),
+                ToolMessage.of("2", toolCall.id()));
 
-        var secondCallChatMessages = List.<TextChatMessage> of(
-                TextChatMessageSystem.of("This is a systemMessage"),
-                TextChatMessageUser.of("Execute the sum of 1 + 1"),
-                TextChatMessageAssistant.of(List.of(TextChatToolCall.of(toolExecutionRequest))),
-                TextChatMessageTool.of(toolExecutionResultMessage));
-
-        var secondCallParameters = generateChatRequest(secondCallChatMessages, List.of(TextChatParameterTool.of(tool)), false);
+        var secondCallParameters = generateChatRequest(secondCallChatMessages, List.of(tool), false);
 
         mockWatsonxBuilder(URL_WATSONX_CHAT_API, 200)
                 .body(mapper.writeValueAsString(secondCallParameters))
@@ -193,17 +183,16 @@ public class AiServiceToolChoiceNameTest extends WireMockAbstract {
     @Test
     void streaming_chat() throws Exception {
 
-        var toolExecutionRequest = ToolExecutionRequest.builder()
-                .name("sum")
-                .id("chatcmpl-tool-7cf5dfd7c52441e59a7585243b22a86a")
-                .arguments("{\"first\": 1, \"second\": 1}")
-                .build();
+        var toolCall = ToolCall.of(
+                "chatcmpl-tool-7cf5dfd7c52441e59a7585243b22a86a",
+                "sum",
+                "{\"first\":1, \"second\":1}");
 
-        var firstCallChatMessages = List.<TextChatMessage> of(
-                TextChatMessageSystem.of("This is a systemMessage"),
-                TextChatMessageUser.of("Execute the sum of 1 + 1"));
+        var firstCallChatMessages = List.<ChatMessage> of(
+                com.ibm.watsonx.ai.chat.model.SystemMessage.of("This is a systemMessage"),
+                com.ibm.watsonx.ai.chat.model.UserMessage.text("Execute the sum of 1 + 1"));
 
-        var firstCallParameters = generateChatRequest(firstCallChatMessages, List.of(TextChatParameterTool.of(tool)), true);
+        var firstCallParameters = generateChatRequest(firstCallChatMessages, List.of(tool), true);
 
         mockWatsonxBuilder(URL_WATSONX_CHAT_STREAMING_API, 200)
                 .body(mapper.writeValueAsString(firstCallParameters))
@@ -212,15 +201,13 @@ public class AiServiceToolChoiceNameTest extends WireMockAbstract {
                 .response(RESPONSE_WATSONX_CHAT_STREAMING_TOOLS_API)
                 .build();
 
-        var toolExecutionResultMessage = ToolExecutionResultMessage.from(toolExecutionRequest, "2");
+        var secondCallChatMessages = List.<ChatMessage> of(
+                com.ibm.watsonx.ai.chat.model.SystemMessage.of("This is a systemMessage"),
+                com.ibm.watsonx.ai.chat.model.UserMessage.text("Execute the sum of 1 + 1"),
+                AssistantMessage.of(toolCall),
+                ToolMessage.of("2", toolCall.id()));
 
-        var secondCallChatMessages = List.<TextChatMessage> of(
-                TextChatMessageSystem.of("This is a systemMessage"),
-                TextChatMessageUser.of("Execute the sum of 1 + 1"),
-                TextChatMessageAssistant.of(List.of(TextChatToolCall.of(toolExecutionRequest))),
-                TextChatMessageTool.of(toolExecutionResultMessage));
-
-        var secondCallParameters = generateChatRequest(secondCallChatMessages, List.of(TextChatParameterTool.of(tool)), false);
+        var secondCallParameters = generateChatRequest(secondCallChatMessages, List.of(tool), false);
 
         mockWatsonxBuilder(URL_WATSONX_CHAT_STREAMING_API, 200)
                 .body(mapper.writeValueAsString(secondCallParameters))
@@ -243,10 +230,6 @@ public class AiServiceToolChoiceNameTest extends WireMockAbstract {
                                 id: 4
                                 event: message
                                 data: {"id":"chat-049e3ff7ff08416fb5c334d05af059da","model_id":"mistralai/mistral-large","choices":[],"created":1728810714,"model_version":"2.0.0","created_at":"2024-10-13T09:11:55.715Z","usage":{"completion_tokens":36,"prompt_tokens":88,"total_tokens":124}}
-
-                                id: 5
-                                event: close
-                                data: {}
                                 """)
                 .build();
 
@@ -255,19 +238,21 @@ public class AiServiceToolChoiceNameTest extends WireMockAbstract {
         assertEquals(List.of("The res", "ult is 2"), result);
     }
 
-    private TextChatRequest generateChatRequest(List<TextChatMessage> messages, List<TextChatParameterTool> tools,
+    private TextChatRequest generateChatRequest(List<ChatMessage> messages, List<com.ibm.watsonx.ai.chat.model.Tool> tools,
             boolean withToolChoice) {
-        LangChain4jWatsonxConfig.WatsonConfig watsonConfig = langchain4jWatsonConfig.defaultConfig();
+        LangChain4jWatsonxConfig.WatsonxConfig watsonConfig = langchain4jWatsonConfig.defaultConfig();
         ChatModelConfig chatModelConfig = watsonConfig.chatModel();
         String modelId = chatModelConfig.modelName();
         String spaceId = watsonConfig.spaceId().orElse(null);
         String projectId = watsonConfig.projectId().orElse(null);
 
-        TextChatParameters.Builder builder = TextChatParameters.builder()
+        ChatParameters.Builder builder = ChatParameters.builder()
+                .modelId(modelId)
+                .projectId(projectId)
+                .spaceId(spaceId)
                 .frequencyPenalty(0.0)
                 .logprobs(false)
-                .maxTokens(1024)
-                .n(1)
+                .maxCompletionTokens(1024)
                 .presencePenalty(0.0)
                 .temperature(1.0)
                 .topP(1.0)
@@ -277,8 +262,16 @@ public class AiServiceToolChoiceNameTest extends WireMockAbstract {
         if (withToolChoice)
             builder.toolChoice("sum");
         else
-            builder.toolChoiceOption("auto");
+            builder.toolChoiceOption(ToolChoice.AUTO);
 
-        return new TextChatRequest(modelId, spaceId, projectId, messages, tools, builder.build());
+        return TextChatRequest.builder()
+                .modelId(modelId)
+                .projectId(projectId)
+                .spaceId(spaceId)
+                .messages(messages)
+                .tools(tools)
+                .parameters(builder.build())
+                .timeLimit(10000l)
+                .build();
     }
 }

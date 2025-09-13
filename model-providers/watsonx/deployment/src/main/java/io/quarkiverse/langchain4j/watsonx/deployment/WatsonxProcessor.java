@@ -9,7 +9,6 @@ import static io.quarkiverse.langchain4j.watsonx.deployment.WatsonxDotNames.TEXT
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -20,8 +19,6 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.ParameterizedType;
 import org.jboss.jandex.Type;
 
-import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.StreamingChatModel;
 import io.quarkiverse.langchain4j.ModelName;
 import io.quarkiverse.langchain4j.deployment.DotNames;
 import io.quarkiverse.langchain4j.deployment.LangChain4jDotNames;
@@ -36,8 +33,6 @@ import io.quarkiverse.langchain4j.watsonx.deployment.items.BuiltinServiceBuildIt
 import io.quarkiverse.langchain4j.watsonx.deployment.items.TextExtractionClassBuildItem;
 import io.quarkiverse.langchain4j.watsonx.runtime.BuiltinServiceRecorder;
 import io.quarkiverse.langchain4j.watsonx.runtime.WatsonxRecorder;
-import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxFixedRuntimeConfig;
-import io.quarkus.arc.SyntheticCreationalContext;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.deployment.Capabilities;
@@ -156,7 +151,6 @@ public class WatsonxProcessor {
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     void generateBeans(WatsonxRecorder recorder,
-            LangChain4jWatsonxFixedRuntimeConfig fixedRuntimeConfig,
             List<SelectedChatModelProviderBuildItem> selectedChatItem,
             List<SelectedEmbeddingModelCandidateBuildItem> selectedEmbedding,
             List<SelectedScoringModelProviderBuildItem> selectedScoring,
@@ -189,24 +183,9 @@ public class WatsonxProcessor {
                 continue;
 
             String configName = selected.getConfigName();
-            String mode = NamedConfigUtil.isDefault(configName)
-                    ? fixedRuntimeConfig.defaultConfig().mode()
-                    : fixedRuntimeConfig.namedConfig().get(configName).mode();
 
-            Function<SyntheticCreationalContext<ChatModel>, ChatModel> chatModel;
-            Function<SyntheticCreationalContext<StreamingChatModel>, StreamingChatModel> streamingChatModel;
-
-            if (mode.equalsIgnoreCase("chat")) {
-                chatModel = recorder.chatModel(configName);
-                streamingChatModel = recorder.streamingChatModel(configName);
-            } else if (mode.equalsIgnoreCase("generation")) {
-                chatModel = recorder.generationModel(configName);
-                streamingChatModel = recorder.generationStreamingModel(configName);
-            } else {
-                throw new RuntimeException(
-                        "The \"mode\" value for the model \"%s\" is not valid. Choose one between [\"chat\", \"generation\"]"
-                                .formatted(mode, configName));
-            }
+            var chatModel = recorder.chatModel(configName);
+            var streamingChatModel = recorder.streamingChatModel(configName);
 
             var chatBuilder = SyntheticBeanBuildItem
                     .configure(CHAT_MODEL)
@@ -283,9 +262,9 @@ public class WatsonxProcessor {
 
     /**
      * When both {@code rest-client-jackson} and {@code rest-client-jsonb} are present on the classpath we need to make sure
-     * that Jackson is used. This is
-     * not a proper solution as it affects all clients, but it's better than the having the reader/writers be selected at
-     * random.
+     * that Jackson is used.
+     * This is not a proper solution as it affects all clients, but it's better than the having the reader/writers be selected
+     * at random.
      */
     @BuildStep
     public void deprioritizeJsonb(Capabilities capabilities,
