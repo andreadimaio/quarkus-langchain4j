@@ -24,7 +24,7 @@ public interface LangChain4jWatsonxConfig {
      * Default model config.
      */
     @WithParentName
-    WatsonConfig defaultConfig();
+    WatsonxConfig defaultConfig();
 
     /**
      * Named model config.
@@ -33,7 +33,7 @@ public interface LangChain4jWatsonxConfig {
     @ConfigDocMapKey("model-name")
     @WithParentName
     @WithDefaults
-    Map<String, WatsonConfig> namedConfig();
+    Map<String, WatsonxConfig> namedConfig();
 
     /**
      * Configuration for built-in services.
@@ -41,7 +41,7 @@ public interface LangChain4jWatsonxConfig {
     BuiltinServiceConfig builtInService();
 
     @ConfigGroup
-    interface WatsonConfig {
+    interface WatsonxConfig {
 
         /**
          * Specifies the base URL of the watsonx.ai API.

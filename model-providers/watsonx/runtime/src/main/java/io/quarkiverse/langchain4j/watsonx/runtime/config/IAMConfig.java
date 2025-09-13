@@ -1,6 +1,6 @@
 package io.quarkiverse.langchain4j.watsonx.runtime.config;
 
-import java.net.URL;
+import java.net.URI;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -15,7 +15,7 @@ public interface IAMConfig {
      * Base URL of the IAM Authentication API.
      */
     @WithDefault("https://iam.cloud.ibm.com")
-    URL baseUrl();
+    URI baseUrl();
 
     /**
      * Timeout for IAM authentication calls.
