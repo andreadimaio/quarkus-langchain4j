@@ -20,11 +20,11 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkiverse.langchain4j.watsonx.bean.GoogleSearchResult;
-import io.quarkiverse.langchain4j.watsonx.bean.WebCrawlerResult;
-import io.quarkiverse.langchain4j.watsonx.services.GoogleSearchService;
-import io.quarkiverse.langchain4j.watsonx.services.WeatherService;
-import io.quarkiverse.langchain4j.watsonx.services.WebCrawlerService;
+import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool;
+import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool.GoogleSearchResult;
+import com.ibm.watsonx.ai.tool.builtin.WeatherTool;
+import com.ibm.watsonx.ai.tool.builtin.WebCrawlerTool;
+
 import io.quarkus.test.QuarkusUnitTest;
 
 public class BuiltinServiceInjectTest extends WireMockAbstract {
@@ -47,13 +47,13 @@ public class BuiltinServiceInjectTest extends WireMockAbstract {
     }
 
     @Inject
-    WebCrawlerService webCrawlerTool;
+    WebCrawlerTool webCrawlerTool;
 
     @Inject
-    GoogleSearchService googleSearchTool;
+    GoogleSearchTool googleSearchTool;
 
     @Inject
-    WeatherService weatherTool;
+    WeatherTool weatherTool;
 
     @Test
     void testWebCrawler() throws Exception {
@@ -78,10 +78,8 @@ public class BuiltinServiceInjectTest extends WireMockAbstract {
                 .response(response)
                 .build();
 
-        WebCrawlerResult result = webCrawlerTool.process("https://www.ibm.com/us-en");
-        assertEquals("https://www.ibm.com/us-en", result.url());
-        assertEquals("text/html;charset=utf-8", result.contentType());
-        assertTrue(result.content().startsWith("IBM - United States"));
+        String result = webCrawlerTool.process("https://www.ibm.com/us-en");
+        assertTrue(result.startsWith("IBM - United States"));
     }
 
     @Test
