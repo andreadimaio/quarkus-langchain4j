@@ -27,10 +27,10 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.ibm.watsonx.ai.chat.ChatRequest;
 import com.ibm.watsonx.ai.chat.model.ChatMessage;
 import com.ibm.watsonx.ai.chat.model.ChatParameters;
 import com.ibm.watsonx.ai.chat.model.SystemMessage;
+import com.ibm.watsonx.ai.chat.model.TextChatRequest;
 import com.ibm.watsonx.ai.chat.model.UserMessage;
 
 import dev.langchain4j.internal.JsonSchemaElementUtils;
@@ -76,6 +76,7 @@ public class ChatJsonSchemaTest extends WireMockAbstract {
             .maxCompletionTokens(1024)
             .presencePenalty(0.0)
             .temperature(1.0)
+            .logprobs(false)
             .topP(1.0)
             .stop(List.of())
             .timeLimit(DEFAULT_TIME_LIMIT)
@@ -101,16 +102,18 @@ public class ChatJsonSchemaTest extends WireMockAbstract {
     void test_chat_json_schema_input() throws Exception {
         var config = langchain4jWatsonConfig.defaultConfig();
         String modelId = config.chatModel().modelName();
-        String spaceId = config.spaceId().orElse(null);
         String projectId = config.projectId().orElse(null);
 
         var messages = List.<ChatMessage> of(
                 SystemMessage.of("SystemMessage"),
                 UserMessage.text("UserMessage"));
 
-        var body = ChatRequest.builder()
-                .parameters(parameters)
+        var body = TextChatRequest.builder()
+                .modelId(modelId)
+                .projectId(projectId)
                 .messages(messages)
+                .parameters(parameters)
+                .timeLimit(DEFAULT_TIME_LIMIT.toMillis())
                 .build();
 
         mockWatsonxBuilder(URL_WATSONX_CHAT_API, 200)

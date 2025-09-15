@@ -66,8 +66,7 @@ public interface LangChain4jWatsonxConfig {
         /**
          * The version date for the API of the form YYYY-MM-DD.
          */
-        @WithDefault("2025-04-23")
-        String version();
+        Optional<String> version();
 
         /**
          * The space that contains the resource.
@@ -121,11 +120,6 @@ public interface LangChain4jWatsonxConfig {
          * Chat model related settings.
          */
         ChatModelConfig chatModel();
-
-        /**
-         * Generation model related settings.
-         */
-        GenerationModelConfig generationModel();
 
         /**
          * Embedding model related settings.
