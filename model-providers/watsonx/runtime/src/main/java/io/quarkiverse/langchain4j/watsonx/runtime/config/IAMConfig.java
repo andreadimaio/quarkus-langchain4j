@@ -14,7 +14,7 @@ public interface IAMConfig {
     /**
      * Base URL of the IAM Authentication API.
      */
-    @WithDefault("https://iam.cloud.ibm.com")
+    @WithDefault("https://iam.cloud.ibm.com/identity/token")
     URI baseUrl();
 
     /**
