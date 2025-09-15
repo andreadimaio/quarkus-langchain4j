@@ -82,12 +82,6 @@ public interface ChatModelConfig {
     Integer maxTokens();
 
     /**
-     * Specifies how many chat completion choices to generate for each input message.
-     */
-    @WithDefault("1")
-    Integer n();
-
-    /**
      * Applies a penalty to new tokens based on whether they already appear in the generated text so far, encouraging the model
      * to introduce new topics
      * rather than repeat itself.

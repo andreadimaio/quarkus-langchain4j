@@ -65,8 +65,72 @@ public class WatsonxRecorder {
             if (!configProblems.isEmpty())
                 throw new ConfigValidationException(configProblems.toArray(EMPTY_PROBLEMS));
 
-            var builder = chatBuilder(configName);
-            var apiKey = firstOrDefault(runtimeConfig.getValue().defaultConfig().apiKey().orElse(null), watsonxConfig.apiKey());
+            WatsonxConfig defaultConfig = runtimeConfig.getValue().defaultConfig();
+            WatsonxConfig specificConfig = correspondingWatsonxRuntimeConfig(configName);
+            ChatModelConfig chatModelConfig = specificConfig.chatModel();
+
+            URI url = specificConfig.baseUrl()
+                    .or(() -> defaultConfig.baseUrl())
+                    .map(URI::create)
+                    .orElseThrow();
+
+            WatsonxChatModel.Builder builder = WatsonxChatModel.builder()
+                    .url(url)
+                    .version(specificConfig.version().orElse(null))
+                    .modelName(specificConfig.chatModel().modelName())
+                    .frequencyPenalty(chatModelConfig.frequencyPenalty())
+                    .logprobs(chatModelConfig.logprobs())
+                    .topLogprobs(chatModelConfig.topLogprobs().orElse(null))
+                    .maxOutputTokens(chatModelConfig.maxTokens())
+                    .presencePenalty(chatModelConfig.presencePenalty())
+                    .seed(chatModelConfig.seed().orElse(null))
+                    .stopSequences(chatModelConfig.stop().orElse(null))
+                    .temperature(chatModelConfig.temperature())
+                    .topP(chatModelConfig.topP())
+                    .toolChoiceName(chatModelConfig.toolChoiceName().orElse(null))
+                    .timeLimit(specificConfig.timeout().orElse(Duration.ofSeconds(10)));
+
+            if (chatModelConfig.responseFormat().isPresent()) {
+                switch (chatModelConfig.responseFormat().get().toLowerCase()) {
+                    case "json_object" -> builder.responseFormat(ResponseFormat.JSON);
+                    case "json_schema" -> builder.supportedCapabilities(Capability.RESPONSE_FORMAT_JSON_SCHEMA);
+                    case "text" -> {
+                    }
+                    default -> throw new IllegalArgumentException(
+                            "Unknown response format: " + chatModelConfig.responseFormat().get());
+                }
+            }
+
+            ToolChoice toolChoice = chatModelConfig.toolChoiceName()
+                    .map(toolChoiceName -> ToolChoice.REQUIRED)
+                    .orElse(chatModelConfig.toolChoice().orElse(null));
+
+            builder.toolChoice(toolChoice);
+
+            builder.logRequests(
+                    firstOrDefault(
+                            defaultConfig.logRequests().orElse(false),
+                            chatModelConfig.logRequests(),
+                            specificConfig.logRequests()));
+
+            builder.logResponses(
+                    firstOrDefault(
+                            defaultConfig.logResponses().orElse(false),
+                            chatModelConfig.logResponses(),
+                            specificConfig.logResponses()));
+
+            builder.spaceId(
+                    firstOrDefault(
+                            defaultConfig.spaceId().orElse(null),
+                            specificConfig.spaceId()));
+
+            builder.projectId(
+                    firstOrDefault(
+                            defaultConfig.projectId().orElse(null),
+                            specificConfig.projectId()));
+
+            String apiKey = firstOrDefault(runtimeConfig.getValue().defaultConfig().apiKey().orElse(null),
+                    watsonxConfig.apiKey());
 
             return new Function<>() {
                 @Override
@@ -97,8 +161,72 @@ public class WatsonxRecorder {
             if (!configProblems.isEmpty())
                 throw new ConfigValidationException(configProblems.toArray(EMPTY_PROBLEMS));
 
-            var builder = streamingChatBuilder(configName);
-            var apiKey = firstOrDefault(runtimeConfig.getValue().defaultConfig().apiKey().orElse(null), watsonxConfig.apiKey());
+            WatsonxConfig defaultConfig = runtimeConfig.getValue().defaultConfig();
+            WatsonxConfig specificConfig = correspondingWatsonxRuntimeConfig(configName);
+            ChatModelConfig chatModelConfig = specificConfig.chatModel();
+
+            URI url = specificConfig.baseUrl()
+                    .or(() -> defaultConfig.baseUrl())
+                    .map(URI::create)
+                    .orElseThrow();
+
+            WatsonxStreamingChatModel.Builder builder = WatsonxStreamingChatModel.builder()
+                    .url(url)
+                    .version(specificConfig.version().orElse(null))
+                    .modelName(specificConfig.chatModel().modelName())
+                    .frequencyPenalty(chatModelConfig.frequencyPenalty())
+                    .logprobs(chatModelConfig.logprobs())
+                    .topLogprobs(chatModelConfig.topLogprobs().orElse(null))
+                    .maxOutputTokens(chatModelConfig.maxTokens())
+                    .presencePenalty(chatModelConfig.presencePenalty())
+                    .seed(chatModelConfig.seed().orElse(null))
+                    .stopSequences(chatModelConfig.stop().orElse(null))
+                    .temperature(chatModelConfig.temperature())
+                    .topP(chatModelConfig.topP())
+                    .toolChoiceName(chatModelConfig.toolChoiceName().orElse(null))
+                    .timeLimit(specificConfig.timeout().orElse(Duration.ofSeconds(10)));
+
+            if (chatModelConfig.responseFormat().isPresent()) {
+                switch (chatModelConfig.responseFormat().get().toLowerCase()) {
+                    case "json_object" -> builder.responseFormat(ResponseFormat.JSON);
+                    case "json_schema" -> builder.supportedCapabilities(Capability.RESPONSE_FORMAT_JSON_SCHEMA);
+                    case "text" -> {
+                    }
+                    default -> throw new IllegalArgumentException(
+                            "Unknown response format: " + chatModelConfig.responseFormat().get());
+                }
+            }
+
+            ToolChoice toolChoice = chatModelConfig.toolChoiceName()
+                    .map(toolChoiceName -> ToolChoice.REQUIRED)
+                    .orElse(chatModelConfig.toolChoice().orElse(null));
+
+            builder.toolChoice(toolChoice);
+
+            builder.logRequests(
+                    firstOrDefault(
+                            defaultConfig.logRequests().orElse(false),
+                            chatModelConfig.logRequests(),
+                            specificConfig.logRequests()));
+
+            builder.logResponses(
+                    firstOrDefault(
+                            defaultConfig.logResponses().orElse(false),
+                            chatModelConfig.logResponses(),
+                            specificConfig.logResponses()));
+
+            builder.spaceId(
+                    firstOrDefault(
+                            defaultConfig.spaceId().orElse(null),
+                            specificConfig.spaceId()));
+
+            builder.projectId(
+                    firstOrDefault(
+                            defaultConfig.projectId().orElse(null),
+                            specificConfig.projectId()));
+
+            String apiKey = firstOrDefault(runtimeConfig.getValue().defaultConfig().apiKey().orElse(null),
+                    watsonxConfig.apiKey());
 
             return new Function<>() {
                 @Override
@@ -149,7 +277,7 @@ public class WatsonxRecorder {
         WatsonxEmbeddingModel.Builder builder = WatsonxEmbeddingModel.builder()
                 .url(url)
                 .timeout(watsonxConfig.timeout().orElse(Duration.ofSeconds(10)))
-                .version(watsonxConfig.version())
+                .version(watsonxConfig.version().orElse(null))
                 .modelName(embeddingModelConfig.modelName());
 
         builder.logRequests(
@@ -207,7 +335,7 @@ public class WatsonxRecorder {
         WatsonxScoringModel.Builder builder = WatsonxScoringModel.builder()
                 .url(url)
                 .timeout(watsonxConfig.timeout().orElse(Duration.ofSeconds(10)))
-                .version(watsonxConfig.version())
+                .version(watsonxConfig.version().orElse(null))
                 .modelName(rerankModelConfig.modelName());
 
         builder.logRequests(
@@ -295,142 +423,6 @@ public class WatsonxRecorder {
                         .build();
             }
         };
-    }
-
-    private WatsonxChatModel.Builder chatBuilder(String configName) {
-        WatsonxConfig defaultConfig = runtimeConfig.getValue().defaultConfig();
-        WatsonxConfig specificConfig = correspondingWatsonxRuntimeConfig(configName);
-        ChatModelConfig chatModelConfig = specificConfig.chatModel();
-
-        URI url = specificConfig.baseUrl()
-                .or(() -> defaultConfig.baseUrl())
-                .map(URI::create)
-                .orElseThrow();
-
-        WatsonxChatModel.Builder builder = WatsonxChatModel.builder();
-        builder.url(url);
-
-        if (chatModelConfig.responseFormat().isPresent()) {
-            switch (chatModelConfig.responseFormat().get().toLowerCase()) {
-                case "json_object" -> builder.responseFormat(ResponseFormat.JSON);
-                case "json_schema" -> builder.supportedCapabilities(Capability.RESPONSE_FORMAT_JSON_SCHEMA);
-                case "text" -> {
-                }
-                default ->
-                    throw new IllegalArgumentException("Unknown response format: " + chatModelConfig.responseFormat().get());
-            }
-        }
-
-        ToolChoice toolChoice = chatModelConfig.toolChoiceName()
-                .map(toolChoiceName -> ToolChoice.REQUIRED)
-                .orElse(chatModelConfig.toolChoice().orElse(null));
-
-        builder.toolChoiceName(chatModelConfig.toolChoiceName().orElse(null));
-        builder.toolChoice(toolChoice);
-        builder.timeLimit(specificConfig.timeout().orElse(Duration.ofSeconds(10)));
-
-        builder.logRequests(
-                firstOrDefault(
-                        defaultConfig.logRequests().orElse(false),
-                        chatModelConfig.logRequests(),
-                        specificConfig.logRequests()));
-
-        builder.logResponses(
-                firstOrDefault(
-                        defaultConfig.logResponses().orElse(false),
-                        chatModelConfig.logResponses(),
-                        specificConfig.logResponses()));
-
-        builder.spaceId(
-                firstOrDefault(
-                        defaultConfig.spaceId().orElse(null),
-                        specificConfig.spaceId()));
-
-        builder.projectId(
-                firstOrDefault(
-                        defaultConfig.projectId().orElse(null),
-                        specificConfig.projectId()));
-
-        return builder
-                .version(specificConfig.version())
-                .modelName(specificConfig.chatModel().modelName())
-                .frequencyPenalty(chatModelConfig.frequencyPenalty())
-                .logprobs(chatModelConfig.logprobs())
-                .topLogprobs(chatModelConfig.topLogprobs().orElse(null))
-                .maxOutputTokens(chatModelConfig.maxTokens())
-                .presencePenalty(chatModelConfig.presencePenalty())
-                .seed(chatModelConfig.seed().orElse(null))
-                .stopSequences(chatModelConfig.stop().orElse(null))
-                .temperature(chatModelConfig.temperature())
-                .topP(chatModelConfig.topP());
-    }
-
-    private WatsonxStreamingChatModel.Builder streamingChatBuilder(String configName) {
-        WatsonxConfig defaultConfig = runtimeConfig.getValue().defaultConfig();
-        WatsonxConfig specificConfig = correspondingWatsonxRuntimeConfig(configName);
-        ChatModelConfig chatModelConfig = specificConfig.chatModel();
-
-        URI url = specificConfig.baseUrl()
-                .or(() -> defaultConfig.baseUrl())
-                .map(URI::create)
-                .orElseThrow();
-
-        WatsonxStreamingChatModel.Builder builder = WatsonxStreamingChatModel.builder();
-        builder.url(url);
-
-        if (chatModelConfig.responseFormat().isPresent()) {
-            switch (chatModelConfig.responseFormat().get().toLowerCase()) {
-                case "json_object" -> builder.responseFormat(ResponseFormat.JSON);
-                case "json_schema" -> builder.supportedCapabilities(Capability.RESPONSE_FORMAT_JSON_SCHEMA);
-                case "text" -> {
-                }
-                default ->
-                    throw new IllegalArgumentException("Unknown response format: " + chatModelConfig.responseFormat().get());
-            }
-        }
-
-        ToolChoice toolChoice = chatModelConfig.toolChoiceName()
-                .map(toolChoiceName -> ToolChoice.REQUIRED)
-                .orElse(chatModelConfig.toolChoice().orElse(null));
-
-        builder.toolChoiceName(chatModelConfig.toolChoiceName().orElse(null));
-        builder.toolChoice(toolChoice);
-        builder.timeLimit(specificConfig.timeout().orElse(Duration.ofSeconds(10)));
-
-        builder.logRequests(
-                firstOrDefault(
-                        defaultConfig.logRequests().orElse(false),
-                        chatModelConfig.logRequests(),
-                        specificConfig.logRequests()));
-
-        builder.logResponses(
-                firstOrDefault(
-                        defaultConfig.logResponses().orElse(false),
-                        chatModelConfig.logResponses(),
-                        specificConfig.logResponses()));
-
-        builder.spaceId(
-                firstOrDefault(
-                        defaultConfig.spaceId().orElse(null),
-                        specificConfig.spaceId()));
-
-        builder.projectId(
-                firstOrDefault(
-                        defaultConfig.projectId().orElse(null),
-                        specificConfig.projectId()));
-
-        return builder
-                .version(specificConfig.version())
-                .modelName(specificConfig.chatModel().modelName())
-                .frequencyPenalty(chatModelConfig.frequencyPenalty())
-                .logprobs(chatModelConfig.logprobs())
-                .topLogprobs(chatModelConfig.topLogprobs().orElse(null))
-                .maxOutputTokens(chatModelConfig.maxTokens())
-                .presencePenalty(chatModelConfig.presencePenalty())
-                .seed(chatModelConfig.seed().orElse(null))
-                .stopSequences(chatModelConfig.stop().orElse(null))
-                .temperature(chatModelConfig.temperature())
-                .topP(chatModelConfig.topP());
     }
 
     private LangChain4jWatsonxConfig.WatsonxConfig correspondingWatsonxRuntimeConfig(String configName) {

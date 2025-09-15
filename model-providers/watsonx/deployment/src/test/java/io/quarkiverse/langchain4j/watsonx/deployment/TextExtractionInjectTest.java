@@ -25,10 +25,6 @@ import io.quarkus.test.QuarkusUnitTest;
 
 public class TextExtractionInjectTest extends WireMockAbstract {
 
-    static String PROCESS_EXTRACTION_ID = "custom-id";
-    static String FILE_NAME = "test.pdf";
-    static String OUTPUT_FILE_NAME = "test.md";
-
     @RegisterExtension
     static QuarkusUnitTest unitTest = new QuarkusUnitTest()
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.base-url", URL_WATSONX_SERVER)
@@ -62,8 +58,7 @@ public class TextExtractionInjectTest extends WireMockAbstract {
                     "true")
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.custom.text-extraction.log-responses",
                     "true")
-            .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class).addClasses(WireMockUtil.class)
-                    .addAsResource(FILE_NAME));
+            .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class).addClasses(WireMockUtil.class));
 
     @Override
     void handlerBeforeEach() {
