@@ -10,7 +10,6 @@ import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_IAM
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WATSONX_CHAT_API;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WATSONX_CHAT_STREAMING_API;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WATSONX_SERVER;
-import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.VERSION;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.streamingChatResponseHandler;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -31,10 +30,10 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.ibm.watsonx.ai.chat.ChatRequest;
 import com.ibm.watsonx.ai.chat.model.ChatMessage;
 import com.ibm.watsonx.ai.chat.model.ChatParameters;
 import com.ibm.watsonx.ai.chat.model.SystemMessage;
+import com.ibm.watsonx.ai.chat.model.TextChatRequest;
 import com.ibm.watsonx.ai.chat.model.UserMessage;
 
 import dev.langchain4j.model.chat.ChatModel;
@@ -83,13 +82,12 @@ public class ChatDefaultPropertiesTest extends WireMockAbstract {
         assertEquals(Optional.empty(), runtimeConfig.iam().timeout());
         assertEquals(false, runtimeConfig.logRequests().orElse(false));
         assertEquals(false, runtimeConfig.logResponses().orElse(false));
-        assertEquals(VERSION, runtimeConfig.version());
+        assertTrue(runtimeConfig.version().isEmpty());
         assertEquals(DEFAULT_CHAT_MODEL, runtimeConfig.chatModel().modelName());
         assertEquals(0, runtimeConfig.chatModel().frequencyPenalty());
         assertEquals(false, runtimeConfig.chatModel().logprobs());
         assertTrue(runtimeConfig.chatModel().topLogprobs().isEmpty());
         assertEquals(1024, runtimeConfig.chatModel().maxTokens());
-        assertEquals(1, runtimeConfig.chatModel().n());
         assertEquals(0, runtimeConfig.chatModel().presencePenalty());
         assertEquals(Optional.empty(), runtimeConfig.chatModel().seed());
         assertEquals(Optional.empty(), runtimeConfig.chatModel().stop());
@@ -108,9 +106,12 @@ public class ChatDefaultPropertiesTest extends WireMockAbstract {
                 SystemMessage.of("SystemMessage"),
                 UserMessage.text("UserMessage"));
 
-        var body = ChatRequest.builder()
+        var body = TextChatRequest.builder()
+                .modelId(DEFAULT_CHAT_MODEL)
+                .projectId(PROJECT_ID)
                 .messages(messages)
                 .parameters(parameters)
+                .timeLimit(DEFAULT_TIME_LIMIT.toMillis())
                 .build();
 
         mockWatsonxBuilder(URL_WATSONX_CHAT_API, 200)
@@ -129,9 +130,12 @@ public class ChatDefaultPropertiesTest extends WireMockAbstract {
                 SystemMessage.of("SystemMessage"),
                 UserMessage.text("UserMessage"));
 
-        var body = ChatRequest.builder()
+        var body = TextChatRequest.builder()
+                .modelId(DEFAULT_CHAT_MODEL)
+                .projectId(PROJECT_ID)
                 .messages(messagesToSend)
                 .parameters(parameters)
+                .timeLimit(DEFAULT_TIME_LIMIT.toMillis())
                 .build();
 
         mockWatsonxBuilder(URL_WATSONX_CHAT_STREAMING_API, 200)
