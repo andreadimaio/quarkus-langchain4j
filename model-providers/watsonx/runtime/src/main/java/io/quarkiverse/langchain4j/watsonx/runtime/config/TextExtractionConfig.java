@@ -31,13 +31,13 @@ public interface TextExtractionConfig {
     ResultsReference resultsReference();
 
     /**
-     * Whether the Cloud Object Storage client should log requests.
+     * Whether text extraction requests should be logged.
      */
     @ConfigDocDefault("false")
     Optional<Boolean> logRequests();
 
     /**
-     * Whether the Cloud Object Storage client should log responses.
+     * Whether text extraction responses should be logged.
      */
     @ConfigDocDefault("false")
     Optional<Boolean> logResponses();
@@ -49,7 +49,7 @@ public interface TextExtractionConfig {
     interface DocumentReference {
 
         /**
-         * The ID of the connection asset that contains the credentials required to access the data.
+         * The id of the connection asset that contains the credentials required to access the data.
          */
         String connection();
 
@@ -66,7 +66,7 @@ public interface TextExtractionConfig {
     interface ResultsReference {
 
         /**
-         * The ID of the connection asset used to store the extracted results.
+         * The id of the connection asset used to store the extracted results.
          */
         String connection();
 

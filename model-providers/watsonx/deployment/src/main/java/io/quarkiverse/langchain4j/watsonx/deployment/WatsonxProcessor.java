@@ -31,7 +31,7 @@ import io.quarkiverse.langchain4j.deployment.items.SelectedScoringModelProviderB
 import io.quarkiverse.langchain4j.runtime.NamedConfigUtil;
 import io.quarkiverse.langchain4j.watsonx.deployment.items.BuiltinServiceBuildItem;
 import io.quarkiverse.langchain4j.watsonx.deployment.items.TextExtractionClassBuildItem;
-import io.quarkiverse.langchain4j.watsonx.runtime.BuiltinServiceRecorder;
+import io.quarkiverse.langchain4j.watsonx.runtime.BuiltinToolRecorder;
 import io.quarkiverse.langchain4j.watsonx.runtime.WatsonxRecorder;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
@@ -123,7 +123,7 @@ public class WatsonxProcessor {
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     void generateBuiltinToolBeans(
-            BuiltinServiceRecorder recorder,
+            BuiltinToolRecorder recorder,
             List<BuiltinServiceBuildItem> builtinToolClasses,
             BuildProducer<SyntheticBeanBuildItem> beanProducer) {
 
@@ -135,11 +135,11 @@ public class WatsonxProcessor {
                     .unremovable()
                     .scope(ApplicationScoped.class);
 
-            if (builtinToolClass.getDotName().equals(WatsonxDotNames.GOOGLE_SEARCH_SERVICE))
+            if (builtinToolClass.getDotName().equals(WatsonxDotNames.GOOGLE_SEARCH_TOOL))
                 builder.supplier(recorder.googleSearch());
-            else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WEB_CRAWLER_SERVICE))
+            else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WEB_CRAWLER_TOOL))
                 builder.supplier(recorder.webCrawler());
-            else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WEATHER_SERVICE))
+            else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WEATHER_TOOL))
                 builder.supplier(recorder.weather());
             else
                 throw new RuntimeException("BuiltinServiceClass not recognised");
@@ -250,11 +250,11 @@ public class WatsonxProcessor {
     }
 
     private boolean isABuiltinToolClass(DotName dotName) {
-        if (dotName.equals(WatsonxDotNames.WEB_CRAWLER_SERVICE))
+        if (dotName.equals(WatsonxDotNames.WEB_CRAWLER_TOOL))
             return true;
-        else if (dotName.equals(WatsonxDotNames.GOOGLE_SEARCH_SERVICE))
+        else if (dotName.equals(WatsonxDotNames.GOOGLE_SEARCH_TOOL))
             return true;
-        else if (dotName.equals(WatsonxDotNames.WEATHER_SERVICE))
+        else if (dotName.equals(WatsonxDotNames.WEATHER_TOOL))
             return true;
         else
             return false;
