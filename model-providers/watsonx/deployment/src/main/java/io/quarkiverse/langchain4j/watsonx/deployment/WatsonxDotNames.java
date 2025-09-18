@@ -6,10 +6,12 @@ import com.ibm.watsonx.ai.textextraction.TextExtractionService;
 import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool;
 import com.ibm.watsonx.ai.tool.builtin.WeatherTool;
 import com.ibm.watsonx.ai.tool.builtin.WebCrawlerTool;
+import com.ibm.watsonx.ai.tool.builtin.WikipediaTool;
 
 public class WatsonxDotNames {
-    public static final DotName WEB_CRAWLER_SERVICE = DotName.createSimple(WebCrawlerTool.class);
-    public static final DotName GOOGLE_SEARCH_SERVICE = DotName.createSimple(GoogleSearchTool.class);
-    public static final DotName WEATHER_SERVICE = DotName.createSimple(WeatherTool.class);
+    public static final DotName WEB_CRAWLER_TOOL = DotName.createSimple(WebCrawlerTool.class);
+    public static final DotName GOOGLE_SEARCH_TOOL = DotName.createSimple(GoogleSearchTool.class);
+    public static final DotName WEATHER_TOOL = DotName.createSimple(WeatherTool.class);
+    public static final DotName WIKIPEDIA_TOOL = DotName.createSimple(WikipediaTool.class);
     public static final DotName TEXT_EXTRACTION = DotName.createSimple(TextExtractionService.class);
 }
