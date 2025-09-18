@@ -21,7 +21,7 @@ import io.quarkus.runtime.annotations.Recorder;
 import io.smallrye.config.ConfigValidationException;
 
 @Recorder
-public class BuiltinServiceRecorder {
+public class BuiltinToolRecorder {
 
     private static final ConfigValidationException.Problem[] EMPTY_PROBLEMS = new ConfigValidationException.Problem[0];
     private static final String MISSING_BUILTIN_SERVICE_PROPERTY_ERROR = "To use the built-in service classes, you must set the property 'quarkus.langchain4j.watsonx.built-in.%s'";
@@ -29,7 +29,7 @@ public class BuiltinServiceRecorder {
 
     private final RuntimeValue<LangChain4jWatsonxConfig> runtimeConfig;
 
-    public BuiltinServiceRecorder(RuntimeValue<LangChain4jWatsonxConfig> runtimeConfig) {
+    public BuiltinToolRecorder(RuntimeValue<LangChain4jWatsonxConfig> runtimeConfig) {
         this.runtimeConfig = runtimeConfig;
     }
 
