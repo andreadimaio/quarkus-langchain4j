@@ -141,6 +141,8 @@ public class WatsonxProcessor {
                 builder.supplier(recorder.webCrawler());
             else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WEATHER_TOOL))
                 builder.supplier(recorder.weather());
+            else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WIKIPEDIA_TOOL))
+                builder.supplier(recorder.wikipedia());
             else
                 throw new RuntimeException("BuiltinServiceClass not recognised");
 

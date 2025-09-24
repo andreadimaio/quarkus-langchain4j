@@ -1,20 +1,14 @@
 package io.quarkiverse.langchain4j.watsonx.runtime;
 
 import static io.quarkiverse.langchain4j.runtime.OptionalUtil.firstOrDefault;
-import static io.quarkiverse.langchain4j.watsonx.runtime.TokenGenerationCache.getOrCreateTokenGenerator;
-
+import static io.quarkiverse.langchain4j.watsonx.runtime.AuthenticationProviderCache.getOrCreateTokenGenerator;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import jakarta.enterprise.inject.Instance;
-import jakarta.enterprise.util.TypeLiteral;
-
 import com.ibm.watsonx.ai.textextraction.TextExtractionService;
-
 import dev.langchain4j.model.chat.Capability;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.DisabledChatModel;
@@ -41,6 +35,8 @@ import io.quarkus.arc.SyntheticCreationalContext;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
 import io.smallrye.config.ConfigValidationException;
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.util.TypeLiteral;
 
 @Recorder
 public class WatsonxRecorder {
@@ -137,7 +133,7 @@ public class WatsonxRecorder {
                 public ChatModel apply(SyntheticCreationalContext<ChatModel> context) {
                     return builder
                             .authenticationProvider(
-                                    getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl(), apiKey))
+                                    getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl().orElse(null), apiKey))
                             .listeners(context.getInjectedReference(CHAT_MODEL_LISTENER_TYPE_LITERAL).stream().toList())
                             .build();
                 }
@@ -233,7 +229,7 @@ public class WatsonxRecorder {
                 public StreamingChatModel apply(SyntheticCreationalContext<StreamingChatModel> context) {
                     return builder
                             .authenticationProvider(
-                                    getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl(), apiKey))
+                                    getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl().orElse(null), apiKey))
                             .listeners(context.getInjectedReference(CHAT_MODEL_LISTENER_TYPE_LITERAL).stream().toList())
                             .build();
                 }
@@ -307,7 +303,7 @@ public class WatsonxRecorder {
             public WatsonxEmbeddingModel get() {
                 return builder
                         .authenticationProvider(
-                                getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl(), apiKey))
+                                getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl().orElse(null), apiKey))
                         .build();
             }
         };
@@ -365,7 +361,7 @@ public class WatsonxRecorder {
             public WatsonxScoringModel get() {
                 return builder
                         .authenticationProvider(
-                                getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl(), apiKey))
+                                getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl().orElse(null), apiKey))
                         .build();
             }
         };
@@ -378,13 +374,13 @@ public class WatsonxRecorder {
 
         var apiKey = firstOrDefault(runtimeConfig.getValue().defaultConfig().apiKey().orElse(null), watsonxConfig.apiKey());
 
-        URI url = watsonxConfig.baseUrl()
+        URI baseUrl = watsonxConfig.baseUrl()
                 .or(() -> defaultConfig.baseUrl())
                 .map(URI::create)
                 .orElseThrow();
 
         TextExtractionService.Builder builder = TextExtractionService.builder()
-                .url(url)
+                .baseUrl(baseUrl)
                 .timeout(watsonxConfig.timeout().orElse(Duration.ofSeconds(10)))
                 .documentReference(textExtractionConfig.documentReference().connection(),
                         textExtractionConfig.documentReference().bucketName())
@@ -419,20 +415,20 @@ public class WatsonxRecorder {
             public TextExtractionService get() {
                 return builder
                         .authenticationProvider(
-                                getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl(), apiKey))
+                                getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl().orElse(null), apiKey))
                         .build();
             }
         };
     }
 
     private LangChain4jWatsonxConfig.WatsonxConfig correspondingWatsonxRuntimeConfig(String configName) {
-        LangChain4jWatsonxConfig.WatsonxConfig watsonConfig;
+        LangChain4jWatsonxConfig.WatsonxConfig watsonxConfig;
         if (NamedConfigUtil.isDefault(configName)) {
-            watsonConfig = runtimeConfig.getValue().defaultConfig();
+            watsonxConfig = runtimeConfig.getValue().defaultConfig();
         } else {
-            watsonConfig = runtimeConfig.getValue().namedConfig().get(configName);
+            watsonxConfig = runtimeConfig.getValue().namedConfig().get(configName);
         }
-        return watsonConfig;
+        return watsonxConfig;
     }
 
     private List<ConfigValidationException.Problem> checkConfigurations(String configName) {

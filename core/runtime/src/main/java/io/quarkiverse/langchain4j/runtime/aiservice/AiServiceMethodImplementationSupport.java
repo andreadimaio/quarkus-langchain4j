@@ -8,7 +8,6 @@ import static dev.langchain4j.service.AiServices.removeToolMessages;
 import static dev.langchain4j.service.AiServices.verifyModerationIfNeeded;
 import static io.quarkiverse.langchain4j.runtime.ResponseSchemaUtil.hasResponseSchema;
 import static java.util.Objects.nonNull;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -30,12 +29,8 @@ import java.util.concurrent.Flow;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import jakarta.enterprise.inject.spi.BeanManager;
-
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
-
 import dev.langchain4j.agent.tool.ReturnBehavior;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
@@ -110,6 +105,7 @@ import io.quarkus.arc.Arc;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import io.vertx.core.Context;
+import jakarta.enterprise.inject.spi.BeanManager;
 
 /**
  * Provides the basic building blocks that the generated Interface methods call

@@ -23,6 +23,7 @@ import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.PORT_WA
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.PORT_WX_SERVER;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_IAM_GENERATE_TOKEN;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.VERSION;
+import static java.util.Objects.isNull;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -246,7 +247,7 @@ public abstract class WireMockAbstract {
         }
 
         public IAMBuilder grantType(String grantType) {
-            this.grantType = grantType;
+            this.grantType = isNull(grantType) ? GRANT_TYPE : grantType;
             return this;
         }
 
