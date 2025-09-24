@@ -10,6 +10,6 @@ public class WatsonxIOExecutorProvider implements IOExecutorProvider {
 
     @Override
     public Executor executor() {
-        return Infrastructure.getDefaultWorkerPool();
+        return Infrastructure.getDefaultExecutor();
     }
 }

@@ -14,8 +14,7 @@ public interface IAMConfig {
     /**
      * Base URL of the IAM Authentication API.
      */
-    @WithDefault("https://iam.cloud.ibm.com/identity/token")
-    URI baseUrl();
+    Optional<URI> baseUrl();
 
     /**
      * Timeout for IAM authentication calls.
@@ -27,6 +26,5 @@ public interface IAMConfig {
     /**
      * Grant type for the IAM Authentication API.
      */
-    @WithDefault("urn:ibm:params:oauth:grant-type:apikey")
-    String grantType();
+    Optional<String> grantType();
 }
