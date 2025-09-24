@@ -67,7 +67,7 @@ public class AiChatServiceTest extends WireMockAbstract {
     @Override
     void handlerBeforeEach() {
         mockIAMBuilder(200)
-                .grantType(langchain4jWatsonConfig.defaultConfig().iam().grantType())
+                .grantType(langchain4jWatsonConfig.defaultConfig().iam().grantType().orElse(null))
                 .response(BEARER_TOKEN, new Date())
                 .build();
     }
@@ -234,7 +234,7 @@ public class AiChatServiceTest extends WireMockAbstract {
         var TOOL_CALL = List.<ChatMessage> of(
                 com.ibm.watsonx.ai.chat.model.SystemMessage.of("This is a systemMessage"),
                 com.ibm.watsonx.ai.chat.model.UserMessage.text("Execute the sum of 1 + 1"),
-                AssistantMessage.of(
+                AssistantMessage.tools(
                         ToolCall.of("chatcmpl-tool-3f621ce6ad9240da963d661215621711", "sum", "{\"first\":1, \"second\":1}")),
                 ToolMessage.of("2", "chatcmpl-tool-3f621ce6ad9240da963d661215621711"));
 
@@ -319,7 +319,7 @@ public class AiChatServiceTest extends WireMockAbstract {
         var TOOL_CALL = List.<ChatMessage> of(
                 com.ibm.watsonx.ai.chat.model.SystemMessage.of("This is a systemMessage"),
                 com.ibm.watsonx.ai.chat.model.UserMessage.text("Execute the sum of 1 + 1"),
-                AssistantMessage.of(
+                AssistantMessage.tools(
                         ToolCall.of("chatcmpl-tool-7cf5dfd7c52441e59a7585243b22a86a", "sum", "{\"first\": 1, \"second\": 1}")),
                 ToolMessage.of("2", "chatcmpl-tool-7cf5dfd7c52441e59a7585243b22a86a"));
 

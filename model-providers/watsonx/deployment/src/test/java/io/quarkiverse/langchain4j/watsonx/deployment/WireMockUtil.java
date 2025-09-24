@@ -25,7 +25,7 @@ public class WireMockUtil {
     public static final String URL_WATSONX_TEXT_EXTRACTION_RESULT_API = "/ml/v1/text/extractions/%s?project_id=%s&version=%s";
 
     public static final int PORT_IAM_SERVER = 8090;
-    public static final String URL_IAM_SERVER = "http://localhost:8090/identity/token";
+    public static final String URL_IAM_SERVER = "http://localhost:8090";
     public static final String URL_IAM_GENERATE_TOKEN = "/identity/token";
 
     public static final int PORT_WX_SERVER = 8091;
@@ -39,7 +39,7 @@ public class WireMockUtil {
     public static final String BEARER_TOKEN = "my_super_token";
     public static final String PROJECT_ID = "123123321321";
     public static final String GRANT_TYPE = "urn:ibm:params:oauth:grant-type:apikey";
-    public static final String VERSION = "2025-04-23";
+    public static final String VERSION = "2025-09-03";
     public static final String DEFAULT_CHAT_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8";
     public static final String DEFAULT_EMBEDDING_MODEL = "ibm/granite-embedding-278m-multilingual";
     public static final String DEFAULT_SCORING_MODEL = "cross-encoder/ms-marco-minilm-l-12-v2";

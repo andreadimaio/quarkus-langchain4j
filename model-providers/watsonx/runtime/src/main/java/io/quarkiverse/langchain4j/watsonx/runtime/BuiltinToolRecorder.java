@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool;
 import com.ibm.watsonx.ai.tool.builtin.WeatherTool;
 import com.ibm.watsonx.ai.tool.builtin.WebCrawlerTool;
+import com.ibm.watsonx.ai.tool.builtin.WikipediaTool;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.config.BuiltinServiceConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.IAMConfig;
@@ -154,6 +155,11 @@ public class BuiltinToolRecorder {
                 return new WeatherTool(null);
             }
         };
+    }
+
+    public Supplier<WikipediaTool> wikipedia() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'wikipedia'");
     }
 
     private String getWxBaseUrl(Optional<String> baseUrl) {
