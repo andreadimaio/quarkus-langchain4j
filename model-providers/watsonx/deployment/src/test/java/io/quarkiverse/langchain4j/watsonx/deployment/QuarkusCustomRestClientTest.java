@@ -17,6 +17,8 @@ import com.ibm.watsonx.ai.rerank.RerankService;
 import com.ibm.watsonx.ai.textextraction.TextExtractionService;
 import com.ibm.watsonx.ai.textgeneration.TextGenerationService;
 import com.ibm.watsonx.ai.timeseries.TimeSeriesService;
+import com.ibm.watsonx.ai.tokenization.TokenizationService;
+import com.ibm.watsonx.ai.tool.ToolService;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusChatRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusDeploymentRestClient;
@@ -27,6 +29,8 @@ import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusRerankRestC
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusTextExtractionRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusTextGenerationRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusTimeSeriesRestClient;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusTokenizationRestClient;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusToolRestClient;
 import io.quarkus.test.QuarkusUnitTest;
 
 public class QuarkusCustomRestClientTest {
@@ -180,5 +184,37 @@ public class QuarkusCustomRestClientTest {
         clientField.setAccessible(true);
         var client = clientField.get(timeSeriesService);
         assertThat(client).isInstanceOf(QuarkusTimeSeriesRestClient.class);
+    }
+
+    @Test
+    public void tokenization_client() throws Exception {
+
+        TokenizationService tokenizationService = TokenizationService.builder()
+                .apiKey("test")
+                .modelId("test")
+                .baseUrl("http://localhost")
+                .projectId("project-id")
+                .build();
+
+        Class<TokenizationService> clazz = TokenizationService.class;
+        var clientField = clazz.getDeclaredField("client");
+        clientField.setAccessible(true);
+        var client = clientField.get(tokenizationService);
+        assertThat(client).isInstanceOf(QuarkusTokenizationRestClient.class);
+    }
+
+    @Test
+    public void tool_client() throws Exception {
+
+        ToolService tokenizationService = ToolService.builder()
+                .apiKey("test")
+                .baseUrl("http://localhost")
+                .build();
+
+        Class<ToolService> clazz = ToolService.class;
+        var clientField = clazz.getDeclaredField("client");
+        clientField.setAccessible(true);
+        var client = clientField.get(tokenizationService);
+        assertThat(client).isInstanceOf(QuarkusToolRestClient.class);
     }
 }
