@@ -2,9 +2,11 @@ package io.quarkiverse.langchain4j.watsonx.runtime.client.impl;
 
 import static com.ibm.watsonx.ai.chat.ChatSubscriber.createSubscriber;
 import static com.ibm.watsonx.ai.chat.ChatSubscriber.toolHasParameters;
+import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClient.retryOn;
 import static java.util.Objects.nonNull;
 
 import java.net.URI;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -18,9 +20,10 @@ import com.ibm.watsonx.ai.chat.model.ExtractionTags;
 import com.ibm.watsonx.ai.chat.model.TextChatRequest;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.ChatRestApi;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxClientLogger;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
 public final class QuarkusChatRestClient extends ChatRestClient {
@@ -51,7 +54,12 @@ public final class QuarkusChatRestClient extends ChatRestClient {
 
     @Override
     public ChatResponse chat(String transactionId, TextChatRequest textChatRequest) {
-        return client.chat(transactionId, version, textChatRequest);
+        return retryOn(transactionId, new Callable<ChatResponse>() {
+            @Override
+            public ChatResponse call() throws Exception {
+                return client.chat(transactionId, version, textChatRequest);
+            }
+        });
     }
 
     @Override
@@ -75,6 +83,7 @@ public final class QuarkusChatRestClient extends ChatRestClient {
                         }
                     }
                 })
+                .onFailure(WatsonxRestClient::shouldRetry).retry().atMost(10)
                 .onFailure().invoke(subscriber::onError)
                 .onCompletion().invoke(subscriber::onComplete)
                 .collect().asList().replaceWithVoid()

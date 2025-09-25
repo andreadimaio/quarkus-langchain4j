@@ -11,9 +11,9 @@ import com.ibm.watsonx.ai.textextraction.TextExtractionResponse;
 import com.ibm.watsonx.ai.textextraction.TextExtractionRestClient;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.TextExtractionRestApi;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxClientLogger;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
 public final class QuarkusTextExtractionRestClient extends TextExtractionRestClient {

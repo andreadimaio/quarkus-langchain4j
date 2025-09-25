@@ -94,12 +94,12 @@ public class AiChatCacheTokenTest extends WireMockAbstract {
                 Map.entry(URL_WATSONX_CHAT_STREAMING_API, RESPONSE_WATSONX_CHAT_STREAMING_API))
                 .forEach(entry -> {
 
-                    WatsonxBuilder builder = mockWatsonxBuilder(entry.getKey(), 200);
-
-                    builder.token("3secondstoken")
-                            .responseMediaType(entry.getKey().equals(URL_WATSONX_CHAT_STREAMING_API)
-                                    ? MediaType.SERVER_SENT_EVENTS
-                                    : MediaType.APPLICATION_JSON)
+                    mockWatsonxBuilder(entry.getKey(), 200)
+                            .token("3secondstoken")
+                            .responseMediaType(
+                                    entry.getKey().equals(URL_WATSONX_CHAT_STREAMING_API)
+                                            ? MediaType.SERVER_SENT_EVENTS
+                                            : MediaType.APPLICATION_JSON)
                             .response(entry.getValue())
                             .build();
 
@@ -108,8 +108,7 @@ public class AiChatCacheTokenTest extends WireMockAbstract {
                             assertDoesNotThrow(() -> chatModel.chat("message"));
                             assertDoesNotThrow(() -> chatModel.chat("message")); // cache
                         }
-                        case URL_WATSONX_CHAT_STREAMING_API ->
-                            assertDoesNotThrow(() -> chatModel.chat("message")); // cache.
+                        case URL_WATSONX_CHAT_STREAMING_API -> assertDoesNotThrow(() -> chatModel.chat("message")); // cache.
                     }
                 });
     }

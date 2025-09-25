@@ -8,8 +8,11 @@ import jakarta.ws.rs.core.MediaType;
 
 import org.jboss.resteasy.reactive.RestForm;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.watsonx.ai.core.auth.IdentityTokenResponse;
 
+import io.quarkiverse.langchain4j.QuarkusJsonCodecFactory;
+import io.quarkus.rest.client.reactive.jackson.ClientObjectMapper;
 import io.smallrye.mutiny.Uni;
 
 @Path("")
@@ -28,4 +31,9 @@ public interface IAMRestApi extends WatsonxRestClient {
     Uni<IdentityTokenResponse> asyncToken(
             @RestForm(value = "apikey") String apikey,
             @RestForm(value = "grant_type") String grantType);
+
+    @ClientObjectMapper
+    static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {
+        return QuarkusJsonCodecFactory.SnakeCaseObjectMapperHolder.MAPPER;
+    }
 }

@@ -10,9 +10,9 @@ import com.ibm.watsonx.ai.rerank.RerankResponse;
 import com.ibm.watsonx.ai.rerank.RerankRestClient;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.RerankRestApi;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxClientLogger;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
 public final class QuarkusRerankRestClient extends RerankRestClient {
