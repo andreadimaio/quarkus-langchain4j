@@ -11,9 +11,9 @@ import com.ibm.watsonx.ai.tool.ToolService.Resources;
 import com.ibm.watsonx.ai.tool.UtilityTool;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.ToolRestApi;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxClientLogger;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
 public final class QuarkusToolRestClient extends ToolRestClient {

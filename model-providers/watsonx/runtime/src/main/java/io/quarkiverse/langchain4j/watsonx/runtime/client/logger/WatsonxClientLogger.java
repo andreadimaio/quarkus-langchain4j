@@ -1,4 +1,4 @@
-package io.quarkiverse.langchain4j.watsonx.runtime.client;
+package io.quarkiverse.langchain4j.watsonx.runtime.client.logger;
 
 import static java.util.Objects.nonNull;
 import static java.util.Optional.ofNullable;

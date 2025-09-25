@@ -12,8 +12,8 @@ import com.ibm.watsonx.ai.foundationmodel.FoundationModelRestClient;
 import com.ibm.watsonx.ai.foundationmodel.FoundationModelTask;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.FoundationModelRestApi;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxClientLogger;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
 public final class QuarkusFoundationModelRestClient extends FoundationModelRestClient {

@@ -10,9 +10,9 @@ import com.ibm.watsonx.ai.timeseries.ForecastResponse;
 import com.ibm.watsonx.ai.timeseries.TimeSeriesRestClient;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.TimeSeriesRestApi;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxClientLogger;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
 public final class QuarkusTimeSeriesRestClient extends TimeSeriesRestClient {

@@ -16,9 +16,9 @@ import com.ibm.watsonx.ai.textgeneration.TextGenerationSubscriber;
 import com.ibm.watsonx.ai.textgeneration.TextRequest;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.TextGenerationRestApi;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxClientLogger;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
 public final class QuarkusTextGenerationRestClient extends TextGenerationRestClient {
