@@ -2,8 +2,10 @@ package io.quarkiverse.langchain4j.watsonx.runtime.client.impl;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+
 import com.ibm.watsonx.ai.core.auth.IdentityTokenResponse;
 import com.ibm.watsonx.ai.core.auth.iam.IAMRestClient;
+
 import io.quarkiverse.langchain4j.watsonx.runtime.client.IAMRestApi;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
@@ -26,12 +28,12 @@ public final class QuarkusIAMRestClient extends IAMRestClient {
 
     @Override
     public IdentityTokenResponse token(String apiKey, String grantType) {
-        return client.token(apiKey, grantType).await().indefinitely();
+        return client.token(apiKey, grantType);
     }
 
     @Override
     public CompletableFuture<IdentityTokenResponse> asyncToken(String apiKey, String grantType) {
-        return client.token(apiKey, grantType).subscribeAsCompletionStage();
+        return client.asyncToken(apiKey, grantType).subscribeAsCompletionStage();
     }
 
     public static final class QuarkusIAMRestClientBuilderFactory implements IAMRestClientBuilderFactory {

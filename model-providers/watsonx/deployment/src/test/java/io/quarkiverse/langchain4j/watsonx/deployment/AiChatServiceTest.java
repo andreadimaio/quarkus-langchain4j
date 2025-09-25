@@ -62,6 +62,8 @@ public class AiChatServiceTest extends WireMockAbstract {
             .overrideConfigKey("quarkus.langchain4j.watsonx.iam.base-url", URL_IAM_SERVER)
             .overrideConfigKey("quarkus.langchain4j.watsonx.project-id", PROJECT_ID)
             .overrideConfigKey("quarkus.langchain4j.watsonx.api-key", API_KEY)
+            .overrideConfigKey("quarkus.langchain4j.watsonx.log-requests", "true")
+            .overrideConfigKey("quarkus.langchain4j.watsonx.log-responses", "true")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class).addClasses(WireMockUtil.class, Calculator.class));
 
     @Override
@@ -299,7 +301,7 @@ public class AiChatServiceTest extends WireMockAbstract {
                 .build();
 
         var result = aiService.streaming("Hello").collect().asList().await().indefinitely();
-        assertEquals(List.of(" He", "llo"), result);
+        assertEquals(List.of("He", "llo"), result);
     }
 
     @Test
@@ -344,11 +346,12 @@ public class AiChatServiceTest extends WireMockAbstract {
                                 id: 4
                                 event: message
                                 data: {"id":"chat-049e3ff7ff08416fb5c334d05af059da","model_id":"mistralai/mistral-large","choices":[],"created":1728810714,"model_version":"2.0.0","created_at":"2024-10-13T09:11:55.715Z","usage":{"completion_tokens":36,"prompt_tokens":88,"total_tokens":124}}
+
                                 """)
                 .build();
 
-        var result = aiServiceWithTool.streaming("streaming", "Execute the sum of 1 + 1").collect().asList().await()
-                .indefinitely();
+        var result = aiServiceWithTool.streaming("streaming", "Execute the sum of 1 + 1")
+                .collect().asList().await().indefinitely();
         assertEquals(List.of("The res", "ult is 2"), result);
 
         var messages = memory.getMessages("streaming");

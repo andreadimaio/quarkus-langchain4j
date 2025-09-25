@@ -1,0 +1,62 @@
+package io.quarkiverse.langchain4j.watsonx.runtime.client.impl;
+
+import java.net.URI;
+import java.util.concurrent.TimeUnit;
+
+import org.jboss.resteasy.reactive.client.api.LoggingScope;
+
+import com.ibm.watsonx.ai.embedding.EmbeddingRequest;
+import com.ibm.watsonx.ai.embedding.EmbeddingResponse;
+import com.ibm.watsonx.ai.embedding.EmbeddingRestClient;
+
+import io.quarkiverse.langchain4j.watsonx.runtime.client.EmbeddingRestApi;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxClientLogger;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
+import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
+
+public final class QuarkusEmbeddingRestClient extends EmbeddingRestClient {
+
+    private final EmbeddingRestApi client;
+
+    QuarkusEmbeddingRestClient(Builder builder) {
+        super(builder);
+        try {
+            var restClientBuilder = QuarkusRestClientBuilder.newBuilder()
+                    .baseUrl(URI.create(baseUrl).toURL())
+                    .register(RequestIdHeaderFactory.class)
+                    .clientHeadersFactory(new BearerTokenHeaderFactory(authenticationProvider))
+                    .connectTimeout(timeout.toSeconds(), TimeUnit.SECONDS)
+                    .readTimeout(timeout.toSeconds(), TimeUnit.SECONDS);
+
+            if (logRequests || logResponses) {
+                restClientBuilder.loggingScope(LoggingScope.REQUEST_RESPONSE);
+                restClientBuilder.clientLogger(new WatsonxClientLogger(logRequests, logResponses));
+            }
+
+            client = restClientBuilder.build(EmbeddingRestApi.class);
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public EmbeddingResponse embedding(String transactionId, EmbeddingRequest embeddingRequest) {
+        return client.embedding(transactionId, version, embeddingRequest);
+    }
+
+    public static final class QuarkusEmbeddingRestClientBuilderFactory implements EmbeddingRestClientBuilderFactory {
+        @Override
+        public Builder get() {
+            return new QuarkusEmbeddingRestClient.Builder();
+        }
+    }
+
+    static final class Builder extends EmbeddingRestClient.Builder {
+        @Override
+        public EmbeddingRestClient build() {
+            return new QuarkusEmbeddingRestClient(this);
+        }
+    }
+}

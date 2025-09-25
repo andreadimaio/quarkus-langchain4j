@@ -2,13 +2,19 @@ package io.quarkiverse.langchain4j.watsonx.runtime;
 
 import static io.quarkiverse.langchain4j.runtime.OptionalUtil.firstOrDefault;
 import static io.quarkiverse.langchain4j.watsonx.runtime.AuthenticationProviderCache.getOrCreateTokenGenerator;
+
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.util.TypeLiteral;
+
 import com.ibm.watsonx.ai.textextraction.TextExtractionService;
+
 import dev.langchain4j.model.chat.Capability;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.DisabledChatModel;
@@ -35,8 +41,6 @@ import io.quarkus.arc.SyntheticCreationalContext;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
 import io.smallrye.config.ConfigValidationException;
-import jakarta.enterprise.inject.Instance;
-import jakarta.enterprise.util.TypeLiteral;
 
 @Recorder
 public class WatsonxRecorder {
