@@ -172,6 +172,7 @@ public class BuiltinToolRecorder {
             case "https://jp-tok.ml.cloud.ibm.com" -> "https://api.jp-tok.dataplatform.cloud.ibm.com/wx";
             case "https://au-syd.ml.cloud.ibm.com" -> "https://api.au-syd.dai.cloud.ibm.com/wx";
             case "https://ca-tor.ml.cloud.ibm.com" -> "https://api.ca-tor.dai.cloud.ibm.com/wx";
+            case "https://ap-south-1.aws.wxai.ibm.com" -> "https://api.ap-south-1.aws.data.ibm.com/wx";
             default -> null;
         };
     }

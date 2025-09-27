@@ -3,7 +3,6 @@ package io.quarkiverse.langchain4j.watsonx.deployment;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.API_KEY;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.BEARER_TOKEN;
-import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.PROJECT_ID;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.RESPONSE_WATSONX_CHAT_API;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.RESPONSE_WATSONX_CHAT_STREAMING_API;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_IAM_SERVER;
@@ -125,10 +124,10 @@ public class ChatAllPropertiesTest extends WireMockAbstract {
     void check_config() throws Exception {
         var runtimeConfig = langchain4jWatsonConfig.defaultConfig();
         assertEquals(URL_WATSONX_SERVER, runtimeConfig.baseUrl().orElse(null).toString());
-        assertEquals(URL_IAM_SERVER, runtimeConfig.iam().baseUrl().toString());
+        assertEquals(URL_IAM_SERVER, runtimeConfig.iam().baseUrl().orElse(null).toString());
         assertEquals(API_KEY, runtimeConfig.apiKey().orElse(null));
         assertEquals("my-space-id", runtimeConfig.spaceId().orElse(null));
-        assertEquals(PROJECT_ID, runtimeConfig.projectId().orElse(null));
+        assertEquals("my-project-id", runtimeConfig.projectId().orElse(null));
         assertEquals(Duration.ofSeconds(60), runtimeConfig.timeout().orElse(null));
         assertEquals(Duration.ofSeconds(60), runtimeConfig.iam().timeout().get());
         assertEquals(true, runtimeConfig.logRequests().orElse(false));

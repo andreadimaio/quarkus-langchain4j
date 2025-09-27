@@ -144,10 +144,12 @@ public class WatsonxRecorder {
             };
         } else {
             return new Function<>() {
+
                 @Override
                 public ChatModel apply(SyntheticCreationalContext<ChatModel> context) {
                     return new DisabledChatModel();
                 }
+
             };
         }
     }
@@ -240,10 +242,12 @@ public class WatsonxRecorder {
             };
         } else {
             return new Function<>() {
+
                 @Override
                 public StreamingChatModel apply(SyntheticCreationalContext<StreamingChatModel> context) {
                     return new DisabledStreamingChatModel();
                 }
+
             };
         }
     }
@@ -303,6 +307,7 @@ public class WatsonxRecorder {
                         watsonxConfig.projectId()));
 
         return new Supplier<>() {
+
             @Override
             public WatsonxEmbeddingModel get() {
                 return builder
@@ -310,6 +315,7 @@ public class WatsonxRecorder {
                                 getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl().orElse(null), apiKey))
                         .build();
             }
+
         };
 
     }
@@ -414,15 +420,10 @@ public class WatsonxRecorder {
                         defaultConfig.projectId().orElse(null),
                         watsonxConfig.projectId()));
 
-        return new Supplier<TextExtractionService>() {
-            @Override
-            public TextExtractionService get() {
-                return builder
-                        .authenticationProvider(
-                                getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl().orElse(null), apiKey))
-                        .build();
-            }
-        };
+        return () -> builder
+                .authenticationProvider(
+                        getOrCreateTokenGenerator(watsonxConfig.iam().baseUrl().orElse(null), apiKey))
+                .build();
     }
 
     private LangChain4jWatsonxConfig.WatsonxConfig correspondingWatsonxRuntimeConfig(String configName) {

@@ -1,6 +1,10 @@
 package io.quarkiverse.langchain4j.watsonx.runtime.client.impl;
 
+import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils.retryOn;
+
 import java.net.URI;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.resteasy.reactive.client.api.LoggingScope;
@@ -12,7 +16,6 @@ import com.ibm.watsonx.ai.tool.UtilityTool;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.ToolRestApi;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
@@ -25,7 +28,6 @@ public final class QuarkusToolRestClient extends ToolRestClient {
         try {
             var restClientBuilder = QuarkusRestClientBuilder.newBuilder()
                     .baseUrl(URI.create(baseUrl).toURL())
-                    .register(RequestIdHeaderFactory.class)
                     .clientHeadersFactory(new BearerTokenHeaderFactory(authenticationProvider))
                     .connectTimeout(timeout.toSeconds(), TimeUnit.SECONDS)
                     .readTimeout(timeout.toSeconds(), TimeUnit.SECONDS);
@@ -44,17 +46,35 @@ public final class QuarkusToolRestClient extends ToolRestClient {
 
     @Override
     public Resources getAll(String transactionId) {
-        return client.getAll(transactionId);
+        var requestId = UUID.randomUUID().toString();
+        return retryOn(requestId, new Callable<Resources>() {
+            @Override
+            public Resources call() throws Exception {
+                return client.getAll(requestId, transactionId);
+            }
+        });
     }
 
     @Override
     public UtilityTool getByName(String transactionId, String name) {
-        return client.getByName(transactionId, name);
+        var requestId = UUID.randomUUID().toString();
+        return retryOn(requestId, new Callable<UtilityTool>() {
+            @Override
+            public UtilityTool call() throws Exception {
+                return client.getByName(requestId, transactionId, name);
+            }
+        });
     }
 
     @Override
     public String run(String transactionId, ToolRequest request) {
-        return client.run(transactionId, request);
+        var requestId = UUID.randomUUID().toString();
+        return retryOn(requestId, new Callable<String>() {
+            @Override
+            public String call() throws Exception {
+                return client.run(requestId, transactionId, request);
+            }
+        });
     }
 
     public static final class QuarkusToolRestClientBuilderFactory implements ToolRestClientBuilderFactory {

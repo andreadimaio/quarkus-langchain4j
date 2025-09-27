@@ -149,6 +149,6 @@ public class ChatJsonSchemaTest extends WireMockAbstract {
 
         assertThat(streamingResponse.get().aiMessage().text())
                 .isNotNull()
-                .isEqualTo(" Hello");
+                .isEqualTo("Hello");
     }
 }

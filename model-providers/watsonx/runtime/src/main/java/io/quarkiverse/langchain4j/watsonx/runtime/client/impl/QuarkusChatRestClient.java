@@ -2,10 +2,11 @@ package io.quarkiverse.langchain4j.watsonx.runtime.client.impl;
 
 import static com.ibm.watsonx.ai.chat.ChatSubscriber.createSubscriber;
 import static com.ibm.watsonx.ai.chat.ChatSubscriber.toolHasParameters;
-import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClient.retryOn;
+import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils.retryOn;
 import static java.util.Objects.nonNull;
 
 import java.net.URI;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -20,9 +21,8 @@ import com.ibm.watsonx.ai.chat.model.ExtractionTags;
 import com.ibm.watsonx.ai.chat.model.TextChatRequest;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.ChatRestApi;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClient;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
@@ -35,7 +35,6 @@ public final class QuarkusChatRestClient extends ChatRestClient {
         try {
             var restClientBuilder = QuarkusRestClientBuilder.newBuilder()
                     .baseUrl(URI.create(baseUrl).toURL())
-                    .register(RequestIdHeaderFactory.class)
                     .clientHeadersFactory(new BearerTokenHeaderFactory(authenticationProvider))
                     .connectTimeout(timeout.toSeconds(), TimeUnit.SECONDS)
                     .readTimeout(timeout.toSeconds(), TimeUnit.SECONDS);
@@ -54,10 +53,11 @@ public final class QuarkusChatRestClient extends ChatRestClient {
 
     @Override
     public ChatResponse chat(String transactionId, TextChatRequest textChatRequest) {
-        return retryOn(transactionId, new Callable<ChatResponse>() {
+        var requestId = UUID.randomUUID().toString();
+        return retryOn(requestId, new Callable<ChatResponse>() {
             @Override
             public ChatResponse call() throws Exception {
-                return client.chat(transactionId, version, textChatRequest);
+                return client.chat(UUID.randomUUID().toString(), transactionId, version, textChatRequest);
             }
         });
     }
@@ -69,12 +69,14 @@ public final class QuarkusChatRestClient extends ChatRestClient {
             TextChatRequest textChatRequest,
             ChatHandler handler) {
 
+        var requestId = UUID.randomUUID().toString();
+
         var subscriber = createSubscriber(
                 textChatRequest.getToolChoiceOption(),
                 toolHasParameters(textChatRequest.getTools()),
                 extractionTags, handler);
 
-        return client.chatStreaming(transactionId, version, textChatRequest)
+        return client.chatStreaming(requestId, transactionId, version, textChatRequest)
                 .onItem().invoke(new Consumer<String>() {
                     @Override
                     public void accept(String message) {
@@ -83,11 +85,11 @@ public final class QuarkusChatRestClient extends ChatRestClient {
                         }
                     }
                 })
-                .onFailure(WatsonxRestClient::shouldRetry).retry().atMost(10)
+                .onFailure(WatsonxRestClientUtils::shouldRetry).retry().atMost(10)
                 .onFailure().invoke(subscriber::onError)
                 .onCompletion().invoke(subscriber::onComplete)
                 .collect().asList().replaceWithVoid()
-                .subscribe().asCompletionStage();
+                .subscribeAsCompletionStage();
     }
 
     public static final class QuarkusChatRestClientBuilderFactory implements ChatRestClientBuilderFactory {

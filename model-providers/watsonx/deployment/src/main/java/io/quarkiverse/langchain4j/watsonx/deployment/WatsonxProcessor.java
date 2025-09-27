@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Singleton;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassType;
@@ -172,7 +173,7 @@ public class WatsonxProcessor {
                         .configure(TEXT_EXTRACTION)
                         .setRuntimeInit()
                         .defaultBean()
-                        .scope(ApplicationScoped.class)
+                        .scope(Singleton.class)
                         .supplier(recorder.textExtraction(configName));
                 addQualifierIfNecessary(textExtractionBuilder, configName);
                 beanProducer.produce(textExtractionBuilder.done());

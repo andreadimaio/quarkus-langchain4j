@@ -18,7 +18,6 @@ import jakarta.inject.Inject;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool;
 import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool.GoogleSearchResult;
@@ -29,7 +28,6 @@ import io.quarkus.test.QuarkusUnitTest;
 
 public class BuiltinServiceInjectTest extends WireMockAbstract {
 
-    @RegisterExtension
     static QuarkusUnitTest unitTest = new QuarkusUnitTest()
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-service.base-url", URL_WX_SERVER)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.base-url", URL_WATSONX_SERVER)
