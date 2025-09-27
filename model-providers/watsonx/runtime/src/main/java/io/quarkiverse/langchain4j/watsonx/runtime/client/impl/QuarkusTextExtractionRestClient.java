@@ -1,7 +1,9 @@
 package io.quarkiverse.langchain4j.watsonx.runtime.client.impl;
 
-import java.io.InputStream;
+import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils.retryOn;
+
 import java.net.URI;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -11,8 +13,8 @@ import com.ibm.watsonx.ai.textextraction.TextExtractionResponse;
 import com.ibm.watsonx.ai.textextraction.TextExtractionRestClient;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.TextExtractionRestApi;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
@@ -25,7 +27,6 @@ public final class QuarkusTextExtractionRestClient extends TextExtractionRestCli
         super(builder);
         try {
             var textExtractionClientBuilder = QuarkusRestClientBuilder.newBuilder()
-                    .register(RequestIdHeaderFactory.class)
                     .clientHeadersFactory(new BearerTokenHeaderFactory(authenticationProvider))
                     .connectTimeout(timeout.toSeconds(), TimeUnit.SECONDS)
                     .readTimeout(timeout.toSeconds(), TimeUnit.SECONDS);
@@ -39,6 +40,7 @@ public final class QuarkusTextExtractionRestClient extends TextExtractionRestCli
                     .build(TextExtractionRestApi.class);
 
             cosClient = textExtractionClientBuilder.baseUrl(URI.create(cosUrl).toURL())
+                    .property("buffer-response", "true")
                     .build(TextExtractionRestApi.class);
 
         } catch (Exception e) {
@@ -47,51 +49,91 @@ public final class QuarkusTextExtractionRestClient extends TextExtractionRestCli
     }
 
     @Override
+    public boolean deleteFile(DeleteFileRequest request) {
+        return retryOn(request.requestTrackingId(), new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                cosClient.deleteFile(request.bucketName(), request.fileName(), request.requestTrackingId());
+                return true;
+            }
+        });
+    }
+
+    @Override
     public CompletableFuture<Boolean> asyncDeleteFile(DeleteFileRequest request) {
         return cosClient.asyncDeleteFile(request.bucketName(), request.fileName(), request.requestTrackingId())
+                .map(v -> true)
+                .onFailure(WatsonxRestClientUtils::shouldRetry).retry().atMost(10)
                 .subscribe().asCompletionStage();
     }
 
     @Override
-    public InputStream readFile(ReadFileRequest request) {
-        return cosClient.readFile(request.bucketName(), request.fileName(), request.requestTrackingId());
+    public String readFile(ReadFileRequest request) {
+        return retryOn(request.requestTrackingId(), new Callable<String>() {
+            @Override
+            public String call() throws Exception {
+                return cosClient.readFile(request.bucketName(), request.fileName(), request.requestTrackingId());
+            }
+        });
     }
 
     @Override
     public boolean upload(UploadRequest request) {
-        return cosClient.upload(request.bucketName(), request.fileName(), request.requestTrackingId(), request.is());
+        return retryOn(request.requestTrackingId(), new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                cosClient.upload(request.bucketName(), request.fileName(), request.requestTrackingId(), request.is());
+                return true;
+            }
+        });
     }
 
     @Override
     public boolean deleteExtraction(DeleteExtractionRequest request) {
-        return textExtractionClient.deleteExtraction(
-                request.extractionId(),
-                request.requestTrackingId(),
-                request.parameters().getTransactionId(),
-                request.parameters().getProjectId(),
-                request.parameters().getSpaceId(),
-                request.parameters().getHardDelete().orElse(null),
-                version);
+        return retryOn(request.requestTrackingId(), new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                textExtractionClient.deleteExtraction(
+                        request.extractionId(),
+                        request.requestTrackingId(),
+                        request.parameters().getTransactionId(),
+                        request.parameters().getProjectId(),
+                        request.parameters().getSpaceId(),
+                        request.parameters().getHardDelete().orElse(null),
+                        version);
+                return true;
+            }
+        });
     }
 
     @Override
     public TextExtractionResponse fetchExtractionDetails(FetchExtractionDetailsRequest request) {
-        return textExtractionClient.fetchExtractionDetails(
-                request.extractionId(),
-                request.requestTrackingId(),
-                request.parameters().getTransactionId(),
-                request.parameters().getProjectId(),
-                request.parameters().getSpaceId(),
-                version);
+        return retryOn(request.requestTrackingId(), new Callable<TextExtractionResponse>() {
+            @Override
+            public TextExtractionResponse call() throws Exception {
+                return textExtractionClient.fetchExtractionDetails(
+                        request.extractionId(),
+                        request.requestTrackingId(),
+                        request.parameters().getTransactionId(),
+                        request.parameters().getProjectId(),
+                        request.parameters().getSpaceId(),
+                        version);
+            }
+        });
     }
 
     @Override
     public TextExtractionResponse startExtraction(StartExtractionRequest request) {
-        return textExtractionClient.startExtraction(
-                request.requestTrackingId(),
-                request.transactionId(),
-                version,
-                request.textExtractionRequest());
+        return retryOn(request.requestTrackingId(), new Callable<TextExtractionResponse>() {
+            @Override
+            public TextExtractionResponse call() throws Exception {
+                return textExtractionClient.startExtraction(
+                        request.requestTrackingId(),
+                        request.transactionId(),
+                        version,
+                        request.textExtractionRequest());
+            }
+        });
     }
 
     public static final class QuarkusTextExtractionRestClientBuilderFactory implements TextExtractionRestClientBuilderFactory {

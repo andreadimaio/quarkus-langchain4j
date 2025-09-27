@@ -31,7 +31,7 @@ public class TextExtractionInjectTest extends WireMockAbstract {
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.iam.base-url", URL_IAM_SERVER)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.api-key", API_KEY)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.project-id", PROJECT_ID)
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.text-extraction.base-url", URL_COS_SERVER)
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.text-extraction.cos-url", URL_COS_SERVER)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.text-extraction.document-reference.connection",
                     "document-connection")
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.text-extraction.document-reference.bucket-name",
@@ -45,7 +45,7 @@ public class TextExtractionInjectTest extends WireMockAbstract {
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.text-extraction.log-responses",
                     "false")
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.custom.iam.base-url", URL_IAM_SERVER)
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.custom.text-extraction.base-url", URL_COS_SERVER)
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.custom.text-extraction.cos-url", URL_COS_SERVER)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.custom.text-extraction.document-reference.connection",
                     "custom-document-connection")
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.custom.text-extraction.document-reference.bucket-name",

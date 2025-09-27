@@ -94,7 +94,7 @@ public class ChatDefaultPropertiesTest extends WireMockAbstract {
         assertEquals(1.0, runtimeConfig.chatModel().temperature());
         assertEquals(1.0, runtimeConfig.chatModel().topP());
         assertEquals(Optional.empty(), runtimeConfig.chatModel().toolChoice());
-        assertEquals("urn:ibm:params:oauth:grant-type:apikey", runtimeConfig.iam().grantType());
+        assertEquals("urn:ibm:params:oauth:grant-type:apikey", runtimeConfig.iam().grantType().orElse(null));
         assertEquals(false, langchain4jWatsonConfig.builtInService().logRequests().orElse(false));
         assertEquals(false, langchain4jWatsonConfig.builtInService().logResponses().orElse(false));
     }
@@ -157,6 +157,6 @@ public class ChatDefaultPropertiesTest extends WireMockAbstract {
 
         assertThat(streamingResponse.get().aiMessage().text())
                 .isNotNull()
-                .isEqualTo(" Hello");
+                .isEqualTo("Hello");
     }
 }

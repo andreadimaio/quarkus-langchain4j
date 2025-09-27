@@ -1,6 +1,10 @@
 package io.quarkiverse.langchain4j.watsonx.runtime.client.impl;
 
+import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils.retryOn;
+
 import java.net.URI;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -11,8 +15,8 @@ import com.ibm.watsonx.ai.tokenization.TokenizationResponse;
 import com.ibm.watsonx.ai.tokenization.TokenizationRestClient;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.TokenizationRestApi;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
@@ -25,7 +29,6 @@ public final class QuarkusTokenizationRestClient extends TokenizationRestClient 
         try {
             var restClientBuilder = QuarkusRestClientBuilder.newBuilder()
                     .baseUrl(URI.create(baseUrl).toURL())
-                    .register(RequestIdHeaderFactory.class)
                     .clientHeadersFactory(new BearerTokenHeaderFactory(authenticationProvider))
                     .connectTimeout(timeout.toSeconds(), TimeUnit.SECONDS)
                     .readTimeout(timeout.toSeconds(), TimeUnit.SECONDS);
@@ -44,12 +47,20 @@ public final class QuarkusTokenizationRestClient extends TokenizationRestClient 
 
     @Override
     public TokenizationResponse tokenize(String transactionId, TokenizationRequest request) {
-        return client.tokenize(transactionId, version, request);
+        var requestId = UUID.randomUUID().toString();
+        return retryOn(requestId, new Callable<TokenizationResponse>() {
+            @Override
+            public TokenizationResponse call() throws Exception {
+                return client.tokenize(requestId, transactionId, version, request);
+            }
+        });
     }
 
     @Override
     public CompletableFuture<TokenizationResponse> asyncTokenize(String transactionId, TokenizationRequest request) {
-        return client.asyncTokenize(transactionId, version, request).subscribeAsCompletionStage();
+        return client.asyncTokenize(UUID.randomUUID().toString(), transactionId, version, request)
+                .onFailure(WatsonxRestClientUtils::shouldRetry).retry().atMost(10)
+                .subscribeAsCompletionStage();
     }
 
     public static final class QuarkusTokenizationRestClientBuilderFactory implements TokenizationRestClientBuilderFactory {

@@ -1,6 +1,10 @@
 package io.quarkiverse.langchain4j.watsonx.runtime.client.impl;
 
+import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils.retryOn;
+
 import java.net.URI;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.resteasy.reactive.client.api.LoggingScope;
@@ -11,7 +15,6 @@ import com.ibm.watsonx.ai.embedding.EmbeddingRestClient;
 
 import io.quarkiverse.langchain4j.watsonx.runtime.client.EmbeddingRestApi;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.BearerTokenHeaderFactory;
-import io.quarkiverse.langchain4j.watsonx.runtime.client.filter.RequestIdHeaderFactory;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.logger.WatsonxClientLogger;
 import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
@@ -24,7 +27,6 @@ public final class QuarkusEmbeddingRestClient extends EmbeddingRestClient {
         try {
             var restClientBuilder = QuarkusRestClientBuilder.newBuilder()
                     .baseUrl(URI.create(baseUrl).toURL())
-                    .register(RequestIdHeaderFactory.class)
                     .clientHeadersFactory(new BearerTokenHeaderFactory(authenticationProvider))
                     .connectTimeout(timeout.toSeconds(), TimeUnit.SECONDS)
                     .readTimeout(timeout.toSeconds(), TimeUnit.SECONDS);
@@ -43,7 +45,13 @@ public final class QuarkusEmbeddingRestClient extends EmbeddingRestClient {
 
     @Override
     public EmbeddingResponse embedding(String transactionId, EmbeddingRequest embeddingRequest) {
-        return client.embedding(transactionId, version, embeddingRequest);
+        var requestId = UUID.randomUUID().toString();
+        return retryOn(requestId, new Callable<EmbeddingResponse>() {
+            @Override
+            public EmbeddingResponse call() throws Exception {
+                return client.embedding(requestId, transactionId, version, embeddingRequest);
+            }
+        });
     }
 
     public static final class QuarkusEmbeddingRestClientBuilderFactory implements EmbeddingRestClientBuilderFactory {
