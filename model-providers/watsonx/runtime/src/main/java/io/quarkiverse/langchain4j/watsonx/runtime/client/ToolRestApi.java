@@ -4,6 +4,8 @@ import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClien
 import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils.TRANSACTION_ID_HEADER;
 import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils.responseToWatsonxException;
 
+import java.util.Map;
+
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
@@ -13,12 +15,15 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.watsonx.ai.core.exeception.WatsonxException;
 import com.ibm.watsonx.ai.tool.ToolRequest;
 import com.ibm.watsonx.ai.tool.ToolService.Resources;
 import com.ibm.watsonx.ai.tool.UtilityTool;
 
+import io.quarkiverse.langchain4j.QuarkusJsonCodecFactory;
 import io.quarkus.rest.client.reactive.ClientExceptionMapper;
+import io.quarkus.rest.client.reactive.jackson.ClientObjectMapper;
 
 @Path("/v1-beta/utility_agent_tools")
 public interface ToolRestApi {
@@ -40,10 +45,15 @@ public interface ToolRestApi {
     @POST
     @Path("/run")
     @Produces(MediaType.APPLICATION_JSON)
-    String run(
+    Map<String, Object> run(
             @HeaderParam(REQUEST_ID_HEADER) String requestId,
             @HeaderParam(TRANSACTION_ID_HEADER) String transactionId,
             ToolRequest request);
+
+    @ClientObjectMapper
+    static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {
+        return QuarkusJsonCodecFactory.SnakeCaseObjectMapperHolder.MAPPER;
+    }
 
     @ClientExceptionMapper
     static WatsonxException toException(Response response) {

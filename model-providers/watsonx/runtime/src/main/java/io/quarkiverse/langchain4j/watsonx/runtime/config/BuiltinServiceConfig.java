@@ -22,13 +22,6 @@ public interface BuiltinServiceConfig {
     Optional<String> baseUrl();
 
     /**
-     * IBM Cloud API key.
-     * <p>
-     * If empty, the api key inherits the value from the {@code watsonx.api-key} property.
-     */
-    Optional<String> apiKey();
-
-    /**
      * Timeout for built-in tools APIs.
      * <p>
      * If empty, the api key inherits the value from the {@code watsonx.timeout} property.

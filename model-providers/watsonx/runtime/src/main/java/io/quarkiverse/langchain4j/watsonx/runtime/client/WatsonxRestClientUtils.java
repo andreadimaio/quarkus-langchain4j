@@ -31,7 +31,6 @@ public final class WatsonxRestClientUtils {
             .predicate().orElseThrow();
 
     private WatsonxRestClientUtils() {
-        // prevent instantiation
     }
 
     static WatsonxException responseToWatsonxException(Response response) {
