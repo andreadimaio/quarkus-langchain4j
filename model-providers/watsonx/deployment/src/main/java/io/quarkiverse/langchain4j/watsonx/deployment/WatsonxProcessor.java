@@ -5,6 +5,7 @@ import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.EMBEDDIN
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.SCORING_MODEL;
 import static io.quarkiverse.langchain4j.deployment.LangChain4jDotNames.STREAMING_CHAT_MODEL;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WatsonxDotNames.TEXT_EXTRACTION;
+import static io.quarkiverse.langchain4j.watsonx.deployment.WatsonxDotNames.TOOL_SERVICE;
 
 import java.util.HashSet;
 import java.util.List;
@@ -128,22 +129,36 @@ public class WatsonxProcessor {
             List<BuiltinServiceBuildItem> builtinToolClasses,
             BuildProducer<SyntheticBeanBuildItem> beanProducer) {
 
+        if (builtinToolClasses.isEmpty())
+            return;
+
+        beanProducer.produce(SyntheticBeanBuildItem
+                .configure(TOOL_SERVICE)
+                .setRuntimeInit()
+                .defaultBean()
+                .unremovable()
+                .scope(Singleton.class)
+                .supplier(recorder.toolService())
+                .done());
+
         for (BuiltinServiceBuildItem builtinToolClass : builtinToolClasses) {
             var builder = SyntheticBeanBuildItem
                     .configure(builtinToolClass.getDotName())
                     .setRuntimeInit()
                     .defaultBean()
                     .unremovable()
+                    .addInjectionPoint(ParameterizedType.create(DotNames.CDI_INSTANCE,
+                            new Type[] { ClassType.create(WatsonxDotNames.TOOL_SERVICE) }, null))
                     .scope(ApplicationScoped.class);
 
             if (builtinToolClass.getDotName().equals(WatsonxDotNames.GOOGLE_SEARCH_TOOL))
-                builder.supplier(recorder.googleSearch());
+                builder.createWith(recorder.googleSearch());
             else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WEB_CRAWLER_TOOL))
-                builder.supplier(recorder.webCrawler());
+                builder.createWith(recorder.webCrawler());
             else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WEATHER_TOOL))
-                builder.supplier(recorder.weather());
+                builder.createWith(recorder.weather());
             else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WIKIPEDIA_TOOL))
-                builder.supplier(recorder.wikipedia());
+                builder.createWith(recorder.wikipedia());
             else
                 throw new RuntimeException("BuiltinServiceClass not recognised");
 
@@ -173,6 +188,7 @@ public class WatsonxProcessor {
                         .configure(TEXT_EXTRACTION)
                         .setRuntimeInit()
                         .defaultBean()
+                        .unremovable()
                         .scope(Singleton.class)
                         .supplier(recorder.textExtraction(configName));
                 addQualifierIfNecessary(textExtractionBuilder, configName);
@@ -194,6 +210,7 @@ public class WatsonxProcessor {
                     .configure(CHAT_MODEL)
                     .setRuntimeInit()
                     .defaultBean()
+                    .unremovable()
                     .scope(ApplicationScoped.class)
                     .addInjectionPoint(ParameterizedType.create(DotNames.CDI_INSTANCE,
                             new Type[] { ClassType.create(DotNames.CHAT_MODEL_LISTENER) }, null))
@@ -206,6 +223,7 @@ public class WatsonxProcessor {
                     .configure(STREAMING_CHAT_MODEL)
                     .setRuntimeInit()
                     .defaultBean()
+                    .unremovable()
                     .scope(ApplicationScoped.class)
                     .addInjectionPoint(ParameterizedType.create(DotNames.CDI_INSTANCE,
                             new Type[] { ClassType.create(DotNames.CHAT_MODEL_LISTENER) }, null))

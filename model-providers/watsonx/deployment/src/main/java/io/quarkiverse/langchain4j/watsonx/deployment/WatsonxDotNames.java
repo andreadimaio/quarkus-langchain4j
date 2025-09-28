@@ -3,6 +3,7 @@ package io.quarkiverse.langchain4j.watsonx.deployment;
 import org.jboss.jandex.DotName;
 
 import com.ibm.watsonx.ai.textextraction.TextExtractionService;
+import com.ibm.watsonx.ai.tool.ToolService;
 import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool;
 import com.ibm.watsonx.ai.tool.builtin.WeatherTool;
 import com.ibm.watsonx.ai.tool.builtin.WebCrawlerTool;
@@ -14,4 +15,5 @@ public class WatsonxDotNames {
     public static final DotName WEATHER_TOOL = DotName.createSimple(WeatherTool.class);
     public static final DotName WIKIPEDIA_TOOL = DotName.createSimple(WikipediaTool.class);
     public static final DotName TEXT_EXTRACTION = DotName.createSimple(TextExtractionService.class);
+    public static final DotName TOOL_SERVICE = DotName.createSimple(ToolService.class);
 }

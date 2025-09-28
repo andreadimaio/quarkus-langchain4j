@@ -72,7 +72,7 @@ public final class QuarkusToolRestClient extends ToolRestClient {
         return retryOn(requestId, new Callable<String>() {
             @Override
             public String call() throws Exception {
-                return client.run(requestId, transactionId, request);
+                return (String) client.run(requestId, transactionId, request).get("output");
             }
         });
     }
