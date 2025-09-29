@@ -40,7 +40,7 @@ public final class WatsonxRestClientUtils {
         if (body.isEmpty())
             return new WatsonxException("Status code: " + response.getStatus(), response.getStatus(), null);
 
-        var error = HttpUtils.parseErrorBody(body, mediaType.toString());
+        var error = HttpUtils.parseErrorBody(response.getStatus(), body, mediaType.toString());
         var joiner = new StringJoiner("\n");
 
         if (nonNull(error.errors()) && error.errors().size() > 0) {
