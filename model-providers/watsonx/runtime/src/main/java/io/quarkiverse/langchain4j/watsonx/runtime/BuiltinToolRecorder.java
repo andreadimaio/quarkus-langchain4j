@@ -55,6 +55,9 @@ public class BuiltinToolRecorder {
                 getWxBaseUrl(runtimeConfig.getValue().defaultConfig().baseUrl()),
                 builtinToolConfig.baseUrl());
 
+        if (isNull(baseUrl))
+            throw new RuntimeException(INVALID_BASE_URL_ERROR);
+
         var configProblems = checkConfigurations(baseUrl, apiKey);
         if (!configProblems.isEmpty()) {
             throw new ConfigValidationException(configProblems.toArray(EMPTY_PROBLEMS));
