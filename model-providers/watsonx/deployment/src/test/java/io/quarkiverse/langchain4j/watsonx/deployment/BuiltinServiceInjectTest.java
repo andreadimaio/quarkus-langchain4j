@@ -4,7 +4,6 @@ import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.API_KEY
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.BEARER_TOKEN;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.PROJECT_ID;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_IAM_SERVER;
-import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WATSONX_SERVER;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WX_AGENT_TOOL_RUN;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_WX_SERVER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,10 +31,11 @@ public class BuiltinServiceInjectTest extends WireMockAbstract {
     @RegisterExtension
     static QuarkusUnitTest unitTest = new QuarkusUnitTest()
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-service.base-url", URL_WX_SERVER)
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.base-url", URL_WATSONX_SERVER)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.iam.base-url", URL_IAM_SERVER)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.api-key", API_KEY)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.project-id", PROJECT_ID)
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-service.log-requests", "true")
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-service.log-responses", "true")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class).addClass(WireMockUtil.class));
 
     @Override
@@ -54,6 +54,12 @@ public class BuiltinServiceInjectTest extends WireMockAbstract {
 
     @Inject
     WeatherTool weatherTool;
+
+    @Test
+    void check_config() throws Exception {
+        assertEquals(true, langchain4jWatsonConfig.builtInService().logRequests().orElse(false));
+        assertEquals(true, langchain4jWatsonConfig.builtInService().logResponses().orElse(false));
+    }
 
     @Test
     void testWebCrawler() throws Exception {

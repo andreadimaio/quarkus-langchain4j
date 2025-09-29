@@ -130,8 +130,8 @@ public class ChatAllPropertiesTest extends WireMockAbstract {
         assertEquals("my-project-id", runtimeConfig.projectId().orElse(null));
         assertEquals(Duration.ofSeconds(60), runtimeConfig.timeout().orElse(null));
         assertEquals(Duration.ofSeconds(60), runtimeConfig.iam().timeout().get());
-        assertEquals(true, runtimeConfig.logRequests().orElse(false));
-        assertEquals(true, runtimeConfig.logResponses().orElse(false));
+        assertEquals(true, runtimeConfig.chatModel().logRequests().orElse(false));
+        assertEquals(true, runtimeConfig.chatModel().logResponses().orElse(false));
         assertEquals("aaaa-mm-dd", runtimeConfig.version().orElse(null));
         assertEquals("my_super_model", runtimeConfig.chatModel().modelName());
         assertEquals(2.0, runtimeConfig.chatModel().frequencyPenalty());
@@ -145,9 +145,7 @@ public class ChatAllPropertiesTest extends WireMockAbstract {
         assertEquals(0.5, runtimeConfig.chatModel().topP());
         assertEquals("json_object", runtimeConfig.chatModel().responseFormat().orElse(null));
         assertEquals(ToolChoice.REQUIRED, runtimeConfig.chatModel().toolChoice().orElse(null));
-        assertEquals("myfunction", runtimeConfig.chatModel().toolChoiceName().orElse(null));
-        assertEquals(true, langchain4jWatsonConfig.builtInService().logRequests().orElse(false));
-        assertEquals(true, langchain4jWatsonConfig.builtInService().logResponses().orElse(false));
+        assertEquals("my_function", runtimeConfig.chatModel().toolChoiceName().orElse(null));
     }
 
     @Test

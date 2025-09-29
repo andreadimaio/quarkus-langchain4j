@@ -14,6 +14,7 @@ import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.streami
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
@@ -94,7 +95,7 @@ public class ChatDefaultPropertiesTest extends WireMockAbstract {
         assertEquals(1.0, runtimeConfig.chatModel().temperature());
         assertEquals(1.0, runtimeConfig.chatModel().topP());
         assertEquals(Optional.empty(), runtimeConfig.chatModel().toolChoice());
-        assertEquals("urn:ibm:params:oauth:grant-type:apikey", runtimeConfig.iam().grantType().orElse(null));
+        assertNull(runtimeConfig.iam().grantType().orElse(null));
         assertEquals(false, langchain4jWatsonConfig.builtInService().logRequests().orElse(false));
         assertEquals(false, langchain4jWatsonConfig.builtInService().logResponses().orElse(false));
     }
