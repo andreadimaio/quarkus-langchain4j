@@ -68,18 +68,16 @@ public final class WatsonxRestClientUtils {
             } catch (WatsonxException e) {
 
                 if (shouldRetry(e)) {
-                    if (i > 1) {
-                        try {
+                    try {
 
-                            Log.debugf(
-                                    "Retrying request \"{}\" ({}/{}) after failure: {}",
-                                    requestId, i, maxRetries, e.getMessage());
+                        Log.debugf(
+                                "Retrying request \"%s\" (%s/%s) after failure: %s",
+                                requestId, i, maxRetries, e.getMessage());
 
-                            Thread.sleep(timeout.toMillis());
+                        Thread.sleep(timeout.toMillis());
 
-                        } catch (Exception ex) {
-                            throw new RuntimeException(e);
-                        }
+                    } catch (Exception ex) {
+                        throw new RuntimeException(e);
                     }
                     timeout = timeout.multipliedBy(2);
                     continue;
