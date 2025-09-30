@@ -3,12 +3,11 @@ package io.quarkiverse.langchain4j.watsonx.runtime.spi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ibm.watsonx.ai.core.spi.json.JsonProvider;
 import com.ibm.watsonx.ai.core.spi.json.TypeToken;
 
 import io.quarkiverse.langchain4j.QuarkusJsonCodecFactory.SnakeCaseObjectMapperHolder;
 
-public class WatsonxJsonProvider implements JsonProvider {
+public class JsonProvider implements com.ibm.watsonx.ai.core.spi.json.JsonProvider {
 
     private static final ObjectMapper MAPPER = SnakeCaseObjectMapperHolder.MAPPER;
 
