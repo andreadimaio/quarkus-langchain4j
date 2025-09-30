@@ -36,9 +36,9 @@ public interface LangChain4jWatsonxConfig {
     Map<String, WatsonxConfig> namedConfig();
 
     /**
-     * Configuration for built-in services.
+     * Configuration for built-in tools.
      */
-    BuiltinServiceConfig builtInService();
+    BuiltinToolConfig builtInTool();
 
     @ConfigGroup
     interface WatsonxConfig {

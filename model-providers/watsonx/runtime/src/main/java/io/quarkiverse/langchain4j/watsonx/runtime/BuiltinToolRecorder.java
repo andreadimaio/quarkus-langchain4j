@@ -16,11 +16,13 @@ import jakarta.enterprise.util.TypeLiteral;
 
 import com.ibm.watsonx.ai.tool.ToolService;
 import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool;
+import com.ibm.watsonx.ai.tool.builtin.PythonInterpreterTool;
+import com.ibm.watsonx.ai.tool.builtin.TavilySearchTool;
 import com.ibm.watsonx.ai.tool.builtin.WeatherTool;
 import com.ibm.watsonx.ai.tool.builtin.WebCrawlerTool;
 import com.ibm.watsonx.ai.tool.builtin.WikipediaTool;
 
-import io.quarkiverse.langchain4j.watsonx.runtime.config.BuiltinServiceConfig;
+import io.quarkiverse.langchain4j.watsonx.runtime.config.BuiltinToolConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.IAMConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
 import io.quarkus.arc.SyntheticCreationalContext;
@@ -32,7 +34,7 @@ import io.smallrye.config.ConfigValidationException;
 public class BuiltinToolRecorder {
 
     private static final ConfigValidationException.Problem[] EMPTY_PROBLEMS = new ConfigValidationException.Problem[0];
-    private static final String MISSING_BUILTIN_SERVICE_PROPERTY_ERROR = "To use the built-in service classes, you must set the property 'quarkus.langchain4j.watsonx.built-in.%s'";
+    private static final String MISSING_BUILTIN_SERVICE_PROPERTY_ERROR = "To use the built-in service classes, you must set the property 'quarkus.langchain4j.watsonx.built-in-tool.%s'";
     private static final String INVALID_BASE_URL_ERROR = "The property 'quarkus.langchain4j.watsonx.base-url' does not have a correct url. Use one of the urls given in the documentation or use the property 'quarkus.langchain4j.watsonx.built-in-service.base-url' to set a custom url.";
 
     private static final TypeLiteral<Instance<ToolService>> TOOL_SERVICE_TYPE_LITERAL = new TypeLiteral<>() {
@@ -47,7 +49,7 @@ public class BuiltinToolRecorder {
     public Supplier<ToolService> toolService() {
 
         IAMConfig iamConfig = runtimeConfig.getValue().defaultConfig().iam();
-        BuiltinServiceConfig builtinToolConfig = runtimeConfig.getValue().builtInService();
+        BuiltinToolConfig builtinToolConfig = runtimeConfig.getValue().builtInTool();
 
         String apiKey = runtimeConfig.getValue().defaultConfig().apiKey().orElse(null);
 
@@ -125,6 +127,42 @@ public class BuiltinToolRecorder {
             @Override
             public WikipediaTool apply(SyntheticCreationalContext<WikipediaTool> context) {
                 return new WikipediaTool(context.getInjectedReference(TOOL_SERVICE_TYPE_LITERAL).get());
+            }
+        };
+    }
+
+    public Function<SyntheticCreationalContext<TavilySearchTool>, TavilySearchTool> tavilySearch() {
+        var apiKey = runtimeConfig.getValue().builtInTool().tavilySearch().apiKey()
+                .orElseThrow(new Supplier<RuntimeException>() {
+                    @Override
+                    public RuntimeException get() {
+                        return new RuntimeException(
+                                "To use the built-in service TavilySearchTool class, you must set the property 'quarkus.langchain4j.watsonx.built-in-tool.tavily-search.api-key");
+                    }
+                });
+
+        return new Function<SyntheticCreationalContext<TavilySearchTool>, TavilySearchTool>() {
+            @Override
+            public TavilySearchTool apply(SyntheticCreationalContext<TavilySearchTool> context) {
+                return new TavilySearchTool(context.getInjectedReference(TOOL_SERVICE_TYPE_LITERAL).get(), apiKey);
+            }
+        };
+    }
+
+    public Function<SyntheticCreationalContext<PythonInterpreterTool>, PythonInterpreterTool> pythonInterpreter() {
+        var deploymentId = runtimeConfig.getValue().builtInTool().pythonInterpreter().deploymentId()
+                .orElseThrow(new Supplier<RuntimeException>() {
+                    @Override
+                    public RuntimeException get() {
+                        return new RuntimeException(
+                                "To use the built-in service PythonInterpreterTool class, you must set the property 'quarkus.langchain4j.watsonx.built-in-tool.python-interpreter.deployment-id");
+                    }
+                });
+
+        return new Function<SyntheticCreationalContext<PythonInterpreterTool>, PythonInterpreterTool>() {
+            @Override
+            public PythonInterpreterTool apply(SyntheticCreationalContext<PythonInterpreterTool> context) {
+                return new PythonInterpreterTool(context.getInjectedReference(TOOL_SERVICE_TYPE_LITERAL).get(), deploymentId);
             }
         };
     }
