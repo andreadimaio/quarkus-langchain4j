@@ -86,6 +86,7 @@ You can inject the chat model directly:
 [source,java]
 ----
 @Inject ChatModel chatModel;
+@Inject StreamingChatModel streamingChatModel;
 ----
 
 Or declare an AI service interface:
