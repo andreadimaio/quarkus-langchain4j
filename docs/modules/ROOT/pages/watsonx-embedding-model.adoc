@@ -1,23 +1,62 @@
-= IBM watsonx.ai Embedding Models
+= IBM watsonx.ai Chat and Generation Models
 
 include::./includes/attributes.adoc[]
 include::./includes/customization.adoc[]
 
-IBM watsonx.ai also provides access to embedding models that can be used for vector-based similarity search, semantic retrieval, and RAG scenarios.
+https://www.ibm.com/products/watsonx-ai/foundation-models[IBM watsonx.ai] enables the development of generative AI applications using foundation models from IBM and Hugging Face.
+
+IMPORTANT: This extension supports IBM watsonx as a service on IBM Cloud only.
 
 == Prerequisites
 
-Same as for the chat model. Ensure:
+To use watsonx.ai models, configure the following required values in your `application.properties` file:
 
-- base-url
-- project-id
-- api-key
+=== Base URL
 
-are configured.
+The `base-url` depends on the region of your service instance:
 
-See xref:watsonx-chat-model.adoc[IBM watsonx.ai Chat Models] for details on setting up the service and obtaining an API key.
+* Dallas: https://us-south.ml.cloud.ibm.com
+* Frankfurt: https://eu-de.ml.cloud.ibm.com
+* London: https://eu-gb.ml.cloud.ibm.com
+* Tokyo: https://jp-tok.ml.cloud.ibm.com
+* Sydney: https://au-syd.ml.cloud.ibm.com
+* Toronto: https://ca-tor.ml.cloud.ibm.com
+* Mumbai - https://ap-south-1.aws.wxai.ibm.com
+
+[source,properties,subs=attributes+]
+----
+quarkus.langchain4j.watsonx.base-url=https://us-south.ml.cloud.ibm.com
+----
+
+=== Project ID
+
+Obtain the *Project Id* via:
+
+- Visit https://dataplatform.cloud.ibm.com/projects/?context=wx
+- Open your project and click the Manage tab.
+- Copy the Project ID from the Details section.
+
+[source,properties]
+----
+quarkus.langchain4j.watsonx.project-id=23d...
+----
+
+NOTE: You may use the optional _space-id_ as an alternative.
+
+=== API Key
+
+Create an API key by visiting https://cloud.ibm.com/iam/apikeys and clicking *Create +*.
+
+[source,properties]
+----
+quarkus.langchain4j.watsonx.api-key=your-api-key
+----
+
+TIP: You can also use the *QUARKUS_LANGCHAIN4J_WATSONX_API_KEY* environment variable.
 
 == Dependency
+
+Add the following dependency to your project:
 
 [source,xml,subs=attributes+]
 ----
@@ -28,29 +67,203 @@ See xref:watsonx-chat-model.adoc[IBM watsonx.ai Chat Models] for details on sett
 </dependency>
 ----
 
-== Default Configuration
+If no other extension is installed, xref:ai-services.adoc[AI Services] will automatically use this provider.
 
-By default, embedding models are auto-detected if no other LLM extension is installed.
+== Chat Mode
 
-You can inject the embedding model like so:
+IBM watsonx.ai allows you to use different Large Language Model models. To see the full list of available models, visit the following xref:https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-models.html?context=wx[page].
+
+[source,properties,subs=attributes+]
+----
+quarkus.langchain4j.watsonx.base-url=${BASE_URL}
+quarkus.langchain4j.watsonx.api-key=${API_KEY}
+quarkus.langchain4j.watsonx.project-id=${PROJECT_ID}
+quarkus.langchain4j.watsonx.chat-model.model-name=mistralai/mistral-small-3-1-24b-instruct-2503
+----
+
+You can inject the chat model directly:
+
+[source,java]
+----
+@Inject ChatModel chatModel;
+----
+
+Or declare an AI service interface:
+
+[source,java]
+----
+@RegisterAiService
+public interface AiService {
+    @SystemMessage("You are a helpful assistant")
+    String chat(@MemoryId String id, @UserMessage String message);
+}
+----
+
+== Embedding Mode
+
+IBM watsonx.ai allows you to use different embedding models. To see the full list of supported embedding models, visit the following xref:https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-models-embed.html?context=wx&audience=wdp#ibm-provided[page].
+
+[source,properties,subs=attributes+]
+----
+quarkus.langchain4j.watsonx.base-url=${BASE_URL}
+quarkus.langchain4j.watsonx.api-key=${API_KEY}
+quarkus.langchain4j.watsonx.project-id=${PROJECT_ID}
+quarkus.langchain4j.watsonx.embedding-model.model-name=intfloat/multilingual-e5-large	
+----
+
+You can inject the embedding model directly:
+
+[source,java]
+----
+@Inject EmbeddingModel embeddingModel;
+----
+
+== Scoring Mode
+
+IBM watsonx.ai allows you to use different scoring models. To see the full list of supported scoring models, visit the following xref:https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-models-embed.html?context=wx&audience=wdp#reranker-overview[page].
+
+[source,properties,subs=attributes+]
+----
+quarkus.langchain4j.watsonx.base-url=${BASE_URL}
+quarkus.langchain4j.watsonx.api-key=${API_KEY}
+quarkus.langchain4j.watsonx.project-id=${PROJECT_ID}
+quarkus.langchain4j.watsonx.scoring-model.model-name=cross-encoder/ms-marco-minilm-l-12-v2
+----
+
+You can inject the embedding model directly:
+
+[source,java]
+----
+@Inject ScoringModel scoringModel;
+----
+
+== Text Extraction
+
+The `TextExtraction` feature enables developers to extract text from high-value business documents stored in IBM Cloud Object Storage. Extracted text can be used for AI processing, key information identification, or further document analysis.
+
+The API supports text extraction from the following file types:
+
+* PDF
+* GIF
+* JPG
+* PNG
+* TIFF
+* BMP
+* DOC
+* DOCX
+* HTML
+* JFIF
+* PPT
+* PPTX
+
+The extracted text can be output in the following formats:
+
+* JSON
+* MARKDOWN
+* HTML
+* PLAIN_TEXT
+* PAGE_IMAGES
+
+=== Configuration
+
+To enable `TextExtraction` in your application, configure the following properties:
+
+[source,properties]
+----
+quarkus.langchain4j.watsonx.text-extraction.base-url=<base-url>
+quarkus.langchain4j.watsonx.text-extraction.document-reference.connection=<connection-id>
+quarkus.langchain4j.watsonx.text-extraction.document-reference.bucket-name=<bucket-name>
+quarkus.langchain4j.watsonx.text-extraction.results-reference.connection=<connection-id>
+quarkus.langchain4j.watsonx.text-extraction.results-reference.bucket-name=<bucket-name>
+----
+
+- **`base-url`**: The endpoint where the IBM Cloud Object Storage instance is deployed. To find the appropriate value, refer to the https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-endpoints#regionalendpointtable1[IBM Cloud Object Storage endpoint table].
+- **`document-reference.connection`**: The connection asset ID containing credentials to access the source storage.
+- **`document-reference.bucket-name`**: The bucket where documents to be processed will be uploaded.
+- **`results-reference.connection`**: The connection asset ID containing credentials to access the output storage.
+- **`results-reference.bucket-name`**: The bucket where extracted text documents will be saved as new files.
+
+The `document reference` properties define the source storage for input and uloaded files, while the `results reference` properties specify where the extracted content is stored. Both can refer to the same bucket or different ones.
+
+NOTE: For more information on how to get the connection parameter for the `document-reference` and `results-reference` you can refer to the documentation at this https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-api-files.html?context=wx&audience=wdp[link].
+
+=== Using Text Extraction
+
+The `TextExtraction` class provides multiple methods for extracting text from documents. You can either extract text from an existing file in IBM Cloud Object Storage or upload a file and extract its content. To use `TextExtraction`, you need to inject an instance into your application. If multiple configurations are defined, you can specify the appropriate one using the `@ModelName` qualifier.
 
 [source,java]
 ----
 @Inject
-EmbeddingModel model;
+TextExtractionService textExtraction;
+
+@Inject
+@ModelName("custom")
+TextExtractionService customTextExtraction;
 ----
 
-To customize the model, set the following property:
+You can start the extraction process in two ways.
 
-[source,properties]
+First, if the document is already stored in IBM Cloud Object Storage, you can initiate the extraction by using the following method:
+
+[source,java]
 ----
-quarkus.langchain4j.watsonx.embedding-model.model-name=mistralai/mistral-embed
+TextExtractionResponse response = textExtraction.startExtraction("path/to/document");
+String id = response.metadata().id();
 ----
 
-TIP: The same base-url, project-id, and api-key must be present to successfully authenticate with the watsonx service.
+Alternatively, if you're working with a local file, you can upload it and start the extraction process with:
+
+[source,java]
+----
+File file = new File("path/to/document");
+File response = textExtraction.uploadAndStartExtraction(file);
+String id = response.metadata().id();
+----
+
+After starting the extraction, you can check its status by calling:
+
+[source,java]
+----
+TextExtractionResponse response = textExtraction.fetchExtractionRequest(extractionId);
+String result = response.entity().results().status();
+----
+
+If you need to extract and retrieve the text immediately, you have two options.
+
+You can either extract text from an existing file directly:
+
+[source,java]
+----
+String extractedText = textExtraction.extractAndFetch("path/to/document");
+----
+
+Or upload the file and retrieve the extracted text immediately:
+
+[source,java]
+----
+File file = new File("path/to/document");
+String extractedText = textExtraction.uploadExtractAndFetch(file);
+----
+
+All extraction methods can accept a `Parameters` object to customize the behavior of the text extraction request.
+
+The `Parameters` object allows fine-grained control over the extraction process.
+
+[source,java]
+----
+var parameters = TextExtractionParameters.builder()
+        .removeOutputFile(true)
+        .removeUploadedFile(true)
+        .requestedOutputs(MD)
+        .mode(Mode.HIGH_QUALITY)
+        .autoRotationCorrection(false)
+        .outputDpi(16)
+        .build()
+
+File file = new File("path/to/document.pdf");
+String extractedText = textExtraction.uploadExtractAndFetch(file, parameters));
+----
 
 == Configuration
 
 include::includes/quarkus-langchain4j-watsonx.adoc[leveloffset=+1,opts=optional]
-
-NOTE: IBM watsonx.ai also provides a scoring model interface (used for reranking tasks). This feature is documented separately in the RAG and reranking section.

@@ -315,6 +315,7 @@ public class TextExtractionTest extends WireMockAbstract {
                 .removeOutputFile(true)
                 .removeUploadedFile(true)
                 .requestedOutputs(JSON)
+                .outputDpi(0)
                 .build();
 
         assertThrows(
