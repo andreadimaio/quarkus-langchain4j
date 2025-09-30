@@ -21,8 +21,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool;
 import com.ibm.watsonx.ai.tool.builtin.GoogleSearchTool.GoogleSearchResult;
+import com.ibm.watsonx.ai.tool.builtin.PythonInterpreterTool;
+import com.ibm.watsonx.ai.tool.builtin.TavilySearchTool;
+import com.ibm.watsonx.ai.tool.builtin.TavilySearchTool.TavilySearchResult;
 import com.ibm.watsonx.ai.tool.builtin.WeatherTool;
 import com.ibm.watsonx.ai.tool.builtin.WebCrawlerTool;
+import com.ibm.watsonx.ai.tool.builtin.WikipediaTool;
 
 import io.quarkus.test.QuarkusUnitTest;
 
@@ -30,12 +34,15 @@ public class BuiltinServiceInjectTest extends WireMockAbstract {
 
     @RegisterExtension
     static QuarkusUnitTest unitTest = new QuarkusUnitTest()
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-service.base-url", URL_WX_SERVER)
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-tool.base-url", URL_WX_SERVER)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.iam.base-url", URL_IAM_SERVER)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.api-key", API_KEY)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.project-id", PROJECT_ID)
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-service.log-requests", "true")
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-service.log-responses", "true")
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-tool.tavily-search.api-key", "tavily-api-key")
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-tool.python-interpreter.deployment-id",
+                    "deployment-id")
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-tool.log-requests", "true")
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.built-in-tool.log-responses", "true")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class).addClass(WireMockUtil.class));
 
     @Override
@@ -55,10 +62,19 @@ public class BuiltinServiceInjectTest extends WireMockAbstract {
     @Inject
     WeatherTool weatherTool;
 
+    @Inject
+    WikipediaTool wikipediaTool;
+
+    @Inject
+    TavilySearchTool tavilySearchTool;
+
+    @Inject
+    PythonInterpreterTool pythonInterpreterTool;
+
     @Test
     void check_config() throws Exception {
-        assertEquals(true, langchain4jWatsonConfig.builtInService().logRequests().orElse(false));
-        assertEquals(true, langchain4jWatsonConfig.builtInService().logResponses().orElse(false));
+        assertEquals(true, langchain4jWatsonConfig.builtInTool().logRequests().orElse(false));
+        assertEquals(true, langchain4jWatsonConfig.builtInTool().logResponses().orElse(false));
     }
 
     @Test
@@ -113,6 +129,100 @@ public class BuiltinServiceInjectTest extends WireMockAbstract {
 
         String result = weatherTool.find("naples", "italy");
         assertTrue(result.startsWith("Current weather in Naples:"));
+    }
+
+    @Test
+    void testWikipedia() throws Exception {
+
+        String body = """
+                {
+                    "tool_name" : "Wikipedia",
+                    "input" : {
+                        "query": "pc"
+                    }
+                }
+                """;
+
+        String response = """
+                {
+                  "output": "Page: PC\\nSummary: PC or pc may refer to:\\n\\n\\n== Arts and entertainment"
+                }
+                """;
+
+        mockWxBuilder(URL_WX_AGENT_TOOL_RUN, 200)
+                .body(body)
+                .response(response)
+                .build();
+
+        String result = wikipediaTool.search("pc");
+        assertEquals("Page: PC\nSummary: PC or pc may refer to:\n\n\n== Arts and entertainment", result);
+    }
+
+    @Test
+    void testTavilySearch() throws Exception {
+
+        String body = """
+                {
+                    "tool_name" : "TavilySearch",
+                    "input" : {
+                        "query": "test"
+                    },
+                    "config": {
+                        "apiKey": "tavily-api-key",
+                        "maxResults": 2
+                    }
+                }
+                """;
+
+        String response = """
+                {
+                    "output": "[{\\"url\\":\\"https://example.com/test1\\",\\"title\\":\\"Title 1\\",\\"content\\":\\"Test 1\\",\\"score\\":0.63,\\"raw_content\\":null},{\\"url\\":\\"https://example.com/test2\\",\\"title\\":\\"Title 2\\",\\"content\\":\\"Test 2\\",\\"score\\":0.55,\\"raw_content\\":null}]"
+                }""";
+
+        mockWxBuilder(URL_WX_AGENT_TOOL_RUN, 200)
+                .body(body)
+                .response(response)
+                .build();
+
+        List<TavilySearchResult> result = tavilySearchTool.search("test", 2);
+        assertEquals(2, result.size());
+        assertEquals("Title 1", result.get(0).title());
+        assertEquals("Test 1", result.get(0).content());
+        assertEquals(0.63, result.get(0).score());
+        assertEquals("https://example.com/test1", result.get(0).url());
+        assertEquals("Title 2", result.get(1).title());
+        assertEquals("Test 2", result.get(1).content());
+        assertEquals(0.55, result.get(1).score());
+        assertEquals("https://example.com/test2", result.get(1).url());
+    }
+
+    @Test
+    void testPythonInterpreter() throws Exception {
+
+        String body = """
+                {
+                    "tool_name" : "PythonInterpreter",
+                    "input" : {
+                        "code": "print(\\"Hello World\\")"
+                    },
+                    "config": {
+                        "deploymentId": "deployment-id"
+                    }
+                }
+                """;
+
+        String response = """
+                {
+                  "output": "Hello World!"
+                }""";
+
+        mockWxBuilder(URL_WX_AGENT_TOOL_RUN, 200)
+                .body(body)
+                .response(response)
+                .build();
+
+        var result = pythonInterpreterTool.execute("print(\"Hello World\")");
+        assertEquals(result, "Hello World!");
     }
 
     @Test

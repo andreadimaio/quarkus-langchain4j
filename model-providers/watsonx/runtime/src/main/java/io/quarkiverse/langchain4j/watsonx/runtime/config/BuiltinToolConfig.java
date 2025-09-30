@@ -8,14 +8,13 @@ import io.quarkus.runtime.annotations.ConfigGroup;
 import io.smallrye.config.WithDefault;
 
 @ConfigGroup
-public interface BuiltinServiceConfig {
+public interface BuiltinToolConfig {
 
     /**
      * Base URL for the built-in service.
      * <p>
      * All available URLs are listed in the IBM Watsonx.ai documentation at the
-     * <a href="https://cloud.ibm.com/apidocs/watsonx-ai#endpoint-url">following
-     * link</a>.
+     * <a href="https://cloud.ibm.com/apidocs/watsonx-ai#endpoint-url">following link</a>.
      * <p>
      * <b>Note:</b> If empty, the URL is automatically calculated based on the {@code watsonx.base-url} value.
      */
@@ -44,19 +43,30 @@ public interface BuiltinServiceConfig {
     Optional<Boolean> logResponses();
 
     /**
-     * Google search service configuration.
+     * Tavily search configuration.
      */
-    GoogleSearchConfig googleSearch();
+    TavilySearchConfig tavilySearch();
+
+    /**
+     * PythonInterpreter configuration.
+     */
+    PythonInterpreterConfig pythonInterpreter();
 
     @ConfigGroup
-    public interface GoogleSearchConfig {
+    public interface TavilySearchConfig {
 
         /**
-         * Maximum number of search results.
-         * <p>
-         * <strong>Possible values:</strong> <code>1 < value < 20</code>
+         * Tavily API key.
          */
-        @WithDefault("10")
-        int maxResults();
+        Optional<String> apiKey();
+    }
+
+    @ConfigGroup
+    public interface PythonInterpreterConfig {
+
+        /**
+         * Deployment id.
+         */
+        Optional<String> deploymentId();
     }
 }

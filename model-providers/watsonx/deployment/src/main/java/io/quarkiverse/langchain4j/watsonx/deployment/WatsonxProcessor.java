@@ -159,6 +159,10 @@ public class WatsonxProcessor {
                 builder.createWith(recorder.weather());
             else if (builtinToolClass.getDotName().equals(WatsonxDotNames.WIKIPEDIA_TOOL))
                 builder.createWith(recorder.wikipedia());
+            else if (builtinToolClass.getDotName().equals(WatsonxDotNames.TAVILY_SEARCH_TOOL))
+                builder.createWith(recorder.tavilySearch());
+            else if (builtinToolClass.getDotName().equals(WatsonxDotNames.PYTHON_INTERPRETER_TOOL))
+                builder.createWith(recorder.pythonInterpreter());
             else
                 throw new RuntimeException("BuiltinServiceClass not recognised");
 
@@ -276,6 +280,12 @@ public class WatsonxProcessor {
         else if (dotName.equals(WatsonxDotNames.GOOGLE_SEARCH_TOOL))
             return true;
         else if (dotName.equals(WatsonxDotNames.WEATHER_TOOL))
+            return true;
+        else if (dotName.equals(WatsonxDotNames.WIKIPEDIA_TOOL))
+            return true;
+        else if (dotName.equals(WatsonxDotNames.TAVILY_SEARCH_TOOL))
+            return true;
+        else if (dotName.equals(WatsonxDotNames.PYTHON_INTERPRETER_TOOL))
             return true;
         else
             return false;
