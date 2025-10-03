@@ -35,6 +35,7 @@ import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ToolChoice;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import io.quarkiverse.langchain4j.watsonx.runtime.config.ChatModelConfig.ExtractionTagsConfig;
 import io.quarkus.test.QuarkusUnitTest;
 
 public class ChatAllPropertiesTest extends WireMockAbstract {
@@ -64,6 +65,8 @@ public class ChatAllPropertiesTest extends WireMockAbstract {
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.chat-model.tool-choice-name", "my_function")
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.chat-model.log-requests", "true")
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.chat-model.log-responses", "true")
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.chat-model.tags.think", "think")
+            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.chat-model.tags.response", "response")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class).addClass(WireMockUtil.class));
 
     static final String EXPECTED_BODY = """
@@ -146,6 +149,9 @@ public class ChatAllPropertiesTest extends WireMockAbstract {
         assertEquals("json_object", runtimeConfig.chatModel().responseFormat().orElse(null));
         assertEquals(ToolChoice.REQUIRED, runtimeConfig.chatModel().toolChoice().orElse(null));
         assertEquals("my_function", runtimeConfig.chatModel().toolChoiceName().orElse(null));
+        assertNotNull(runtimeConfig.chatModel().tags());
+        assertEquals("think", runtimeConfig.chatModel().tags().map(ExtractionTagsConfig::think).orElse(null));
+        assertEquals("response", runtimeConfig.chatModel().tags().flatMap(ExtractionTagsConfig::response).orElse(null));
     }
 
     @Test
