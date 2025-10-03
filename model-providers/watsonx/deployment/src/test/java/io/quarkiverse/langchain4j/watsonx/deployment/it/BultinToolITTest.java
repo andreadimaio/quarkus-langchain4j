@@ -30,7 +30,7 @@ import io.quarkus.test.QuarkusUnitTest;
 @EnabledIfEnvironmentVariable(named = "WATSONX_URL", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "TAVILY_SEARCH_API_KEY", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "PYTHON_INTERPRETER_DEPLOYMENT_ID", matches = ".+")
-public class BultinToolIT {
+public class BultinToolITTest {
 
     static final String API_KEY = System.getenv("WATSONX_API_KEY");
     static final String URL = System.getenv("WATSONX_URL");

@@ -10,13 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.scoring.ScoringModel;
 import io.quarkus.test.QuarkusUnitTest;
 
 @EnabledIfEnvironmentVariable(named = "WATSONX_API_KEY", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "WATSONX_PROJECT_ID", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "WATSONX_URL", matches = ".+")
-public class EmbeddingModelIT {
+public class ScoringModelITTest {
 
     static final String API_KEY = System.getenv("WATSONX_API_KEY");
     static final String PROJECT_ID = System.getenv("WATSONX_PROJECT_ID");
@@ -30,12 +30,12 @@ public class EmbeddingModelIT {
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class));
 
     @Inject
-    EmbeddingModel embeddingModel;
+    ScoringModel scoringModel;
 
     @Test
-    void test_embedding() {
-        var response = embeddingModel.embed("Embedding this!");
+    void test_score() {
+        var response = scoringModel.score("Rerank this!", "Test to rerank 1");
         assertNotNull(response);
-        assertNotNull(response.content().vectorAsList());
+        assertNotNull(response.content());
     }
 }
