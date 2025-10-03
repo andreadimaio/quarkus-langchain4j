@@ -2,6 +2,7 @@ package io.quarkiverse.langchain4j.watsonx.runtime;
 
 import static io.quarkiverse.langchain4j.runtime.OptionalUtil.firstOrDefault;
 import static io.quarkiverse.langchain4j.watsonx.runtime.AuthenticationProviderCache.getOrCreateTokenGenerator;
+import static java.util.Objects.nonNull;
 
 import java.net.URI;
 import java.time.Duration;
@@ -13,6 +14,7 @@ import java.util.function.Supplier;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.util.TypeLiteral;
 
+import com.ibm.watsonx.ai.chat.model.ExtractionTags;
 import com.ibm.watsonx.ai.textextraction.TextExtractionService;
 
 import dev.langchain4j.model.chat.Capability;
@@ -32,6 +34,7 @@ import dev.langchain4j.model.watsonx.WatsonxScoringModel;
 import dev.langchain4j.model.watsonx.WatsonxStreamingChatModel;
 import io.quarkiverse.langchain4j.runtime.NamedConfigUtil;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.ChatModelConfig;
+import io.quarkiverse.langchain4j.watsonx.runtime.config.ChatModelConfig.ExtractionTagsConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.EmbeddingModelConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig.WatsonxConfig;
@@ -74,6 +77,10 @@ public class WatsonxRecorder {
                     .map(URI::create)
                     .orElseThrow();
 
+            String think = chatModelConfig.tags().map(ExtractionTagsConfig::think).orElse(null);
+            String response = chatModelConfig.tags().flatMap(ExtractionTagsConfig::response).orElse(null);
+            ExtractionTags tags = nonNull(think) ? new ExtractionTags(think, response) : null;
+
             WatsonxChatModel.Builder builder = WatsonxChatModel.builder()
                     .url(url)
                     .version(specificConfig.version().orElse(null))
@@ -88,7 +95,8 @@ public class WatsonxRecorder {
                     .temperature(chatModelConfig.temperature())
                     .topP(chatModelConfig.topP())
                     .toolChoiceName(chatModelConfig.toolChoiceName().orElse(null))
-                    .timeLimit(specificConfig.timeout().orElse(Duration.ofSeconds(10)));
+                    .timeLimit(specificConfig.timeout().orElse(Duration.ofSeconds(10)))
+                    .thinking(tags);
 
             if (chatModelConfig.responseFormat().isPresent()) {
                 switch (chatModelConfig.responseFormat().get().toLowerCase()) {
@@ -172,6 +180,10 @@ public class WatsonxRecorder {
                     .map(URI::create)
                     .orElseThrow();
 
+            String think = chatModelConfig.tags().map(ExtractionTagsConfig::think).orElse(null);
+            String response = chatModelConfig.tags().flatMap(ExtractionTagsConfig::response).orElse(null);
+            ExtractionTags tags = nonNull(think) ? new ExtractionTags(think, response) : null;
+
             WatsonxStreamingChatModel.Builder builder = WatsonxStreamingChatModel.builder()
                     .url(url)
                     .version(specificConfig.version().orElse(null))
@@ -186,7 +198,8 @@ public class WatsonxRecorder {
                     .temperature(chatModelConfig.temperature())
                     .topP(chatModelConfig.topP())
                     .toolChoiceName(chatModelConfig.toolChoiceName().orElse(null))
-                    .timeLimit(specificConfig.timeout().orElse(Duration.ofSeconds(10)));
+                    .timeLimit(specificConfig.timeout().orElse(Duration.ofSeconds(10)))
+                    .thinking(tags);
 
             if (chatModelConfig.responseFormat().isPresent()) {
                 switch (chatModelConfig.responseFormat().get().toLowerCase()) {

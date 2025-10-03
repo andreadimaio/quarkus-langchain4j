@@ -98,6 +98,7 @@ public class ChatDefaultPropertiesTest extends WireMockAbstract {
         assertNull(runtimeConfig.iam().grantType().orElse(null));
         assertEquals(false, langchain4jWatsonConfig.builtInTool().logRequests().orElse(false));
         assertEquals(false, langchain4jWatsonConfig.builtInTool().logResponses().orElse(false));
+        assertNull(runtimeConfig.chatModel().tags());
     }
 
     @Test

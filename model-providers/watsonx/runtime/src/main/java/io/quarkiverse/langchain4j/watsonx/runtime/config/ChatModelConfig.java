@@ -41,8 +41,8 @@ public interface ChatModelConfig {
     /**
      * Specifies the name of a specific tool that the model must call.
      * <p>
-     * When set, the model will be forced to call the specified tool. The
-     * name must exactly match one of the available tools defined for the service.
+     * When set, the model will be forced to call the specified tool. The name must exactly match one of the available tools
+     * defined for the service.
      */
     Optional<String> toolChoiceName();
 
@@ -75,16 +75,16 @@ public interface ChatModelConfig {
 
     /**
      * The maximum number of tokens that can be generated in the chat completion. The total length of input tokens and generated
-     * tokens is limited by the
-     * model's context length. Set to 0 for the model's configured max generated tokens.
+     * tokens is limited by
+     * the model's context length. Set to 0 for the model's configured max generated tokens.
      */
     @WithDefault("1024")
     Integer maxTokens();
 
     /**
      * Applies a penalty to new tokens based on whether they already appear in the generated text so far, encouraging the model
-     * to introduce new topics
-     * rather than repeat itself.
+     * to introduce new
+     * topics rather than repeat itself.
      * <p>
      * <strong>Possible values:</strong> <code>-2 < value < 2</code>
      */
@@ -101,8 +101,8 @@ public interface ChatModelConfig {
      * encountered in the output.
      * <p>
      * This allows control over where the model should end its response. If a stop sequence is encountered before the minimum
-     * number of tokens has been
-     * generated, it will be ignored.
+     * number of tokens has
+     * been generated, it will be ignored.
      * <p>
      * <strong>Possible values:</strong> <code>0 ≤ number of items ≤ 4</code>
      */
@@ -140,6 +140,20 @@ public interface ChatModelConfig {
     Optional<String> responseFormat();
 
     /**
+     * Defines the XML-like tags used to separate the assistant's reasoning from its final response.
+     * <p>
+     * Some foundation models wrap the assistant’s internal reasoning in a dedicated tags.
+     * <p>
+     * This configuration allows to customize which tags should be used when extracting the two parts:
+     * <ul>
+     * <li><b>think</b>: the tag enclosing the assistant's internal reasoning (required)</li>
+     * <li><b>response</b>: the tag enclosing the assistant's final output (optional). If omitted, all text outside the
+     * reasoning tag will be treated
+     * as the response.</li>
+     */
+    Optional<ExtractionTagsConfig> tags();
+
+    /**
      * Whether chat model requests should be logged.
      */
     @ConfigDocDefault("false")
@@ -150,4 +164,24 @@ public interface ChatModelConfig {
      */
     @ConfigDocDefault("false")
     Optional<Boolean> logResponses();
+
+    @ConfigGroup
+    public interface ExtractionTagsConfig {
+
+        /**
+         * The XML-like tag used to identify the assistant’s reasoning section.
+         * <p>
+         * Example: {@code think} will match content enclosed in {@code <think>...</think>}.
+         * <p>
+         * This field is required.
+         */
+        String think();
+
+        /**
+         * The XML-like tag used to identify the assistant’s final response section.
+         * <p>
+         * If not set, everything outside the {@code think} tag will be considered the response.
+         */
+        Optional<String> response();
+    }
 }
