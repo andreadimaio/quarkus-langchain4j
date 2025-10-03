@@ -34,7 +34,7 @@ import io.quarkus.test.QuarkusUnitTest;
 @EnabledIfEnvironmentVariable(named = "WATSONX_RESULTS_REFERENCE_CONNECTION_ID", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "WATSONX_DOCUMENT_REFERENCE_BUCKET", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "CLOUD_OBJECT_STORAGE_URL", matches = ".+")
-public class TextExtractionIT {
+public class TextExtractionITTest {
 
     static final String API_KEY = System.getenv("WATSONX_API_KEY");
     static final String PROJECT_ID = System.getenv("WATSONX_PROJECT_ID");
@@ -51,8 +51,6 @@ public class TextExtractionIT {
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.api-key", API_KEY)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.project-id", PROJECT_ID)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.timeout", "30s")
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.log-requests", "true")
-            .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.log-responses", "true")
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.text-extraction.cos-url", CLOUD_OBJECT_STORAGE_URL)
             .overrideRuntimeConfigKey("quarkus.langchain4j.watsonx.text-extraction.document-reference.connection",
                     DOCUMENT_REFERENCE_CONNECTION_ID)
