@@ -11,6 +11,7 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import com.ibm.watsonx.ai.WatsonxRestClient;
 import com.ibm.watsonx.ai.core.HttpUtils;
 import com.ibm.watsonx.ai.core.exeception.WatsonxException;
 import com.ibm.watsonx.ai.core.exeception.model.WatsonxError;
@@ -21,7 +22,7 @@ import io.quarkus.logging.Log;
 
 public final class WatsonxRestClientUtils {
 
-    static final String TRANSACTION_ID_HEADER = com.ibm.watsonx.ai.WatsonxRestClient.TRANSACTION_ID_HEADER;
+    static final String TRANSACTION_ID_HEADER = WatsonxRestClient.TRANSACTION_ID_HEADER;
     static final String REQUEST_ID_HEADER = BaseHttpClient.REQUEST_ID_HEADER;
 
     private static final Predicate<Throwable> TOKEN_EXPIRED = RetryInterceptor.ON_TOKEN_EXPIRED.retryOn().get(0).predicate()
