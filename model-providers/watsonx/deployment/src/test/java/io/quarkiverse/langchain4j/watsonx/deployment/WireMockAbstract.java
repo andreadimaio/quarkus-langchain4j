@@ -23,6 +23,7 @@ import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.PORT_WA
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.PORT_WX_SERVER;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.URL_IAM_GENERATE_TOKEN;
 import static io.quarkiverse.langchain4j.watsonx.deployment.WireMockUtil.VERSION;
+import static java.util.Objects.isNull;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -41,9 +42,9 @@ import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.http.RequestMethod;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.StubMapping;
+import com.ibm.watsonx.ai.textprocessing.textextraction.TextExtractionRequest;
 
-import io.quarkiverse.langchain4j.watsonx.bean.TextExtractionRequest;
-import io.quarkiverse.langchain4j.watsonx.client.WatsonxRestApi;
+import io.quarkiverse.langchain4j.QuarkusJsonCodecFactory.SnakeCaseObjectMapperHolder;
 import io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig;
 
 public abstract class WireMockAbstract {
@@ -59,7 +60,7 @@ public abstract class WireMockAbstract {
 
     @BeforeAll
     static void beforeAll() {
-        mapper = WatsonxRestApi.objectMapper(new ObjectMapper());
+        mapper = SnakeCaseObjectMapperHolder.MAPPER;
 
         watsonxServer = new WireMockServer(options().port(PORT_WATSONX_SERVER));
         watsonxServer.start();
@@ -92,7 +93,7 @@ public abstract class WireMockAbstract {
     }
 
     void handlerBeforeEach() throws Exception {
-    };
+    }
 
     /**
      * Builder to mock the IAM server.
@@ -144,17 +145,17 @@ public abstract class WireMockAbstract {
     }
 
     /**
-     * Builder to mock the Cloud Object Storage server.
-     */
-    public CosBuilder mockCosBuilder(RequestMethod method, String bucketName, String fileName, int status) {
-        return new CosBuilder(method, "/%s/%s".formatted(bucketName, fileName), status, "");
-    }
-
-    /**
      * Builder to mock the Watsonx.ai server for the text extraction api.
      */
     public TextExtractionBuilder mockTextExtractionBuilder(RequestMethod method, String url, int status) {
         return new TextExtractionBuilder(method, url, status);
+    }
+
+    /**
+     * Builder to mock the Cloud Object Storage server.
+     */
+    public CosBuilder mockCosBuilder(RequestMethod method, String bucketName, String fileName, int status) {
+        return new CosBuilder(method, "/%s/%s".formatted(bucketName, fileName), status, "");
     }
 
     public static abstract class ServerBuilder {
@@ -255,7 +256,7 @@ public abstract class WireMockAbstract {
         }
 
         public IAMBuilder grantType(String grantType) {
-            this.grantType = grantType;
+            this.grantType = isNull(grantType) ? GRANT_TYPE : grantType;
             return this;
         }
 
@@ -479,6 +480,5 @@ public abstract class WireMockAbstract {
                                     .withHeader("Content-Type", super.responseMediaType)
                                     .withBody(super.response)));
         }
-
     }
 }
