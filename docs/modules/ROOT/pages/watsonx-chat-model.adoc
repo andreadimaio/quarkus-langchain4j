@@ -181,9 +181,9 @@ quarkus.langchain4j.watsonx.gateway-chat-model.user=user-1234
 quarkus.langchain4j.watsonx.gateway-chat-model.metadata.my-key=my-value
 ----
 
-NOTE: The foundation-model only parameters (`guided-choice`, `guided-grammar`, `guided-regex`,
-`length-penalty`, `repetition-penalty` and `thinking`) are not supported by the Model Gateway and are
-therefore not available under `quarkus.langchain4j.watsonx.gateway-chat-model`.
+NOTE: The foundation-model only parameters (`guided-choice`, `guided-grammar`, `guided-regex` and
+`thinking`) are not supported by the Model Gateway and are therefore not available under
+`quarkus.langchain4j.watsonx.gateway-chat-model`.
 
 ==== Overriding the routing options per request
 
@@ -571,13 +571,24 @@ The extracted text can be output in the following formats:
 
 === Configuration
 
-To enable `TextExtraction` in your application, configure the following properties:
+To enable `TextExtraction` in your application, configure at least the connection properties:
 
 [source,properties]
 ----
 quarkus.langchain4j.watsonx.base-url=${BASE_URL}
 quarkus.langchain4j.watsonx.api-key=${API_KEY}
 quarkus.langchain4j.watsonx.project-id=${PROJECT_ID}
+----
+
+By default, with no further configuration, documents are read from and results are written to the
+watsonx.ai project's own default storage container (resolved automatically through the project's
+metadata) — no Cloud Object Storage bucket needs to be provisioned or configured.
+
+To use an explicit Cloud Object Storage bucket instead, configure `cos-url` together with
+`document-reference`/`results-reference`:
+
+[source,properties]
+----
 quarkus.langchain4j.watsonx.text-extraction.cos-url=<base-url>
 quarkus.langchain4j.watsonx.text-extraction.document-reference.connection=<connection-id>
 quarkus.langchain4j.watsonx.text-extraction.document-reference.bucket-name=<bucket-name>
@@ -585,13 +596,13 @@ quarkus.langchain4j.watsonx.text-extraction.results-reference.connection=<connec
 quarkus.langchain4j.watsonx.text-extraction.results-reference.bucket-name=<bucket-name>
 ----
 
-- **`cos-url`**: The endpoint where the IBM Cloud Object Storage instance is deployed. To find the appropriate value, refer to the https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-endpoints#regionalendpointtable1[IBM Cloud Object Storage endpoint table].
-- **`document-reference.connection`**: The connection asset ID containing credentials to access the source storage.
+- **`cos-url`**: The endpoint where the IBM Cloud Object Storage instance is deployed. To find the appropriate value, refer to the https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-endpoints#regionalendpointtable1[IBM Cloud Object Storage endpoint table]. Required only when `document-reference` or `results-reference` is set.
+- **`document-reference.connection`**: The connection asset ID containing credentials to access the source storage. If not set, the input document is read from the project's default storage container.
 - **`document-reference.bucket-name`**: The bucket where documents to be processed will be uploaded.
-- **`results-reference.connection`**: The connection asset ID containing credentials to access the output storage.
+- **`results-reference.connection`**: The connection asset ID containing credentials to access the output storage. If not set, the extracted results are stored in the project's default storage container.
 - **`results-reference.bucket-name`**: The bucket where extracted text documents will be saved as new files.
 
-The `document reference` properties define the source storage for input and uloaded files, while the `results reference` properties specify where the extracted content is stored. Both can refer to the same bucket or different ones.
+The `document reference` properties define the source storage for input and uloaded files, while the `results reference` properties specify where the extracted content is stored. Both can refer to the same bucket or different ones, and each can independently use an explicit Cloud Object Storage bucket or the project's default storage container.
 
 NOTE: For more information on how to get the connection parameter for the `document-reference` and `results-reference` you can refer to the documentation at this https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-api-files.html?context=wx&audience=wdp[link].
 
@@ -697,20 +708,30 @@ The API supports text classification from the following file types:
 
 === Configuration
 
-To enable `TextClassification` in your application, configure the following properties:
+To enable `TextClassification` in your application, configure at least the connection properties:
 
 [source,properties]
 ----
 quarkus.langchain4j.watsonx.base-url=${BASE_URL}
 quarkus.langchain4j.watsonx.api-key=${API_KEY}
 quarkus.langchain4j.watsonx.project-id=${PROJECT_ID}
+----
+
+By default, with no further configuration, documents are read from the watsonx.ai project's own
+default storage container (resolved automatically through the project's metadata) — no Cloud Object Storage bucket needs to be provisioned or configured.
+
+To use an explicit Cloud Object Storage bucket instead, configure `cos-url` together with
+`document-reference`:
+
+[source,properties]
+----
 quarkus.langchain4j.watsonx.text-classification.cos-url=<base-url>
 quarkus.langchain4j.watsonx.text-classification.document-reference.connection=<connection-id>
 quarkus.langchain4j.watsonx.text-classification.document-reference.bucket-name=<bucket-name>
 ----
 
-- **`cos-url`**: The endpoint where the IBM Cloud Object Storage instance is deployed. To find the appropriate value, refer to the https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-endpoints#regionalendpointtable1[IBM Cloud Object Storage endpoint table].
-- **`document-reference.connection`**: The connection asset ID containing credentials to access the source storage.
+- **`cos-url`**: The endpoint where the IBM Cloud Object Storage instance is deployed. To find the appropriate value, refer to the https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-endpoints#regionalendpointtable1[IBM Cloud Object Storage endpoint table]. Required only when `document-reference` is set.
+- **`document-reference.connection`**: The connection asset ID containing credentials to access the source storage. If not set, the input document is read from the project's default storage container.
 - **`document-reference.bucket-name`**: The bucket where documents to be processed will be uploaded (or are already stored).
 
 NOTE: For more information on how to get the connection parameter for the `document-reference` you can refer to the documentation at this https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-api-files.html?context=wx&audience=wdp[link].

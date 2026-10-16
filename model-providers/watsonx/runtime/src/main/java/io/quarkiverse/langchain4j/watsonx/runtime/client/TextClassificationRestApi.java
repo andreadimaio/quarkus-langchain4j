@@ -4,14 +4,11 @@ import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClien
 import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils.TRANSACTION_ID_HEADER;
 import static io.quarkiverse.langchain4j.watsonx.runtime.client.WatsonxRestClientUtils.responseToWatsonxException;
 
-import java.io.InputStream;
-
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -28,7 +25,6 @@ import com.ibm.watsonx.ai.textprocessing.textclassification.TextClassificationRe
 import io.quarkiverse.langchain4j.QuarkusJsonCodecFactory;
 import io.quarkus.rest.client.reactive.ClientExceptionMapper;
 import io.quarkus.rest.client.reactive.jackson.ClientObjectMapper;
-import io.smallrye.mutiny.Uni;
 
 @Path("")
 public interface TextClassificationRestApi {
@@ -64,28 +60,6 @@ public interface TextClassificationRestApi {
             @QueryParam("space_id") String spaceId,
             @QueryParam("hard_delete") Boolean hardDelete,
             @QueryParam("version") String version);
-
-    @DELETE
-    @Path("{bucket_name}/{file_name}")
-    void deleteFile(
-            @PathParam("bucket_name") String bucketName,
-            @PathParam("file_name") String fileName,
-            @HeaderParam(REQUEST_ID_HEADER) String requestId);
-
-    @DELETE
-    @Path("{bucket_name}/{file_name}")
-    Uni<Void> deleteFileAsync(
-            @PathParam("bucket_name") String bucketName,
-            @PathParam("file_name") String fileName,
-            @HeaderParam(REQUEST_ID_HEADER) String requestId);
-
-    @PUT
-    @Path("{bucket_name}/{file_name}")
-    void upload(
-            @PathParam("bucket_name") String buckedName,
-            @PathParam("file_name") String fileName,
-            @HeaderParam(REQUEST_ID_HEADER) String requestId,
-            InputStream is);
 
     @ClientObjectMapper
     static ObjectMapper objectMapper(ObjectMapper defaultObjectMapper) {

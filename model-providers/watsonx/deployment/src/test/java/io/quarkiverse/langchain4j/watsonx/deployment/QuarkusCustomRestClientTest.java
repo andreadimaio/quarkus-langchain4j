@@ -22,12 +22,14 @@ import com.ibm.watsonx.ai.gateway.catalog.ModelGatewayCatalogService;
 import com.ibm.watsonx.ai.gateway.chat.ModelGatewayChatService;
 import com.ibm.watsonx.ai.gateway.embedding.ModelGatewayEmbeddingService;
 import com.ibm.watsonx.ai.gateway.image.ModelGatewayImageService;
+import com.ibm.watsonx.ai.project.ProjectService;
 import com.ibm.watsonx.ai.rerank.RerankService;
 import com.ibm.watsonx.ai.textgeneration.TextGenerationService;
 import com.ibm.watsonx.ai.textprocessing.schema.cluster.ClusterSchemaService;
 import com.ibm.watsonx.ai.textprocessing.schema.create.CreateSchemaService;
 import com.ibm.watsonx.ai.textprocessing.schema.improve.ImproveSchemaService;
 import com.ibm.watsonx.ai.textprocessing.schema.merge.MergeSchemaService;
+import com.ibm.watsonx.ai.textprocessing.storage.cos.CosStorageService;
 import com.ibm.watsonx.ai.textprocessing.textclassification.TextClassificationService;
 import com.ibm.watsonx.ai.textprocessing.textextraction.TextExtractionService;
 import com.ibm.watsonx.ai.timeseries.TimeSeriesService;
@@ -39,6 +41,7 @@ import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusCP4DIAMRest
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusCP4DLegacyRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusChatRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusClusterSchemaRestClient;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusCosStorageRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusCreateSchemaRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusDeploymentRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusDetectionRestClient;
@@ -52,6 +55,7 @@ import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusModelGatewa
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusModelGatewayChatRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusModelGatewayEmbeddingRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusModelGatewayImageRestClient;
+import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusProjectRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusRerankRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusTextClassificationRestClient;
 import io.quarkiverse.langchain4j.watsonx.runtime.client.impl.QuarkusTextExtractionRestClient;
@@ -420,6 +424,37 @@ public class QuarkusCustomRestClientTest {
         clientField.setAccessible(true);
         var client = clientField.get(detectionService);
         assertThat(client).isInstanceOf(QuarkusDetectionRestClient.class);
+    }
+
+    @Test
+    public void project_client() throws Exception {
+
+        ProjectService projectService = ProjectService.builder()
+                .apiKey("test")
+                .baseUrl("http://localhost")
+                .build();
+
+        Class<ProjectService> clazz = ProjectService.class;
+        var clientField = clazz.getDeclaredField("client");
+        clientField.setAccessible(true);
+        var client = clientField.get(projectService);
+        assertThat(client).isInstanceOf(QuarkusProjectRestClient.class);
+    }
+
+    @Test
+    public void cos_storage_client() throws Exception {
+
+        CosStorageService cosStorageService = CosStorageService.builder()
+                .apiKey("test")
+                .cosUrl("http://localhost")
+                .bucket("test-bucket")
+                .build();
+
+        Class<CosStorageService> clazz = CosStorageService.class;
+        var clientField = clazz.getDeclaredField("client");
+        clientField.setAccessible(true);
+        var client = clientField.get(cosStorageService);
+        assertThat(client).isInstanceOf(QuarkusCosStorageRestClient.class);
     }
 
     @Test
